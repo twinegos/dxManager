@@ -21,7 +21,7 @@ import dragDropListView as DD
 
 
 
-class dayScheduleUI(object):
+class DayScheduleUI(object):
     def __init__(self):
         self.daySchedule_frame = QFrame()
 

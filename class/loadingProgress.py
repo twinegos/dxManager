@@ -4,7 +4,7 @@ from PySide2.QtWidgets import *
 
 import loadingProgress_UI
 
-class loadingProgressDialog(QDialog):
+class LoadingProgressDialog(QDialog):
 
     progress_updated = Signal(int)    #커스텀 시그널 정의    
 

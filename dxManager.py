@@ -1,36 +1,36 @@
 # encoding:utf-8
 
+# Standard library imports
 import os
 import sys
 import time
 import json
-import pandas as pd
-import openpyxl
-import numpy as np
 import subprocess
-
-#import PySide2.QtGui
-#from collections import defaultdict
-from PySide2 import QtGui
-from PySide2 import QtWidgets
-from PySide2.QtWidgets import *
-from PySide2.QtCore import *
-from PySide2.QtGui import *
-#from PySide2.QtUiTools import loadUiType
 from datetime import datetime, timedelta
-from openpyxl import load_workbook
-from openpyxl.utils import get_column_letter
 from multiprocessing import Process
 from types import MethodType
 
+# Third-party imports
+import pandas as pd
+import openpyxl
+import numpy as np
+from openpyxl import load_workbook
+from openpyxl.utils import get_column_letter
+from pymongo import MongoClient
 
+# PySide2 imports - wildcard 방식으로 변경 (버전 호환성 문제 해결)
+from PySide2.QtCore import *
+from PySide2.QtWidgets import *  
+from PySide2.QtGui import *
+
+from PySide2 import QtWidgets
+
+# External library imports
 dxConfig_path = "/others/backstage/dcc/packages/ext/pylibs/3.7/lib/python3.7/site-packages"
 sys.path.append(dxConfig_path)
 import dxConfig
 import requests
-
-#DB
-from pymongo import MongoClient
+# 데이터베이스 연결 설정
 DBIP = dxConfig.getConf("DB_IP")
 client = MongoClient(DBIP)
 #db = client['SCHEDULE_test']
@@ -47,15 +47,17 @@ client = MongoClient(DBIP)
 
 ################################################################################################################## 
 
+# 상수 정의
 #TACTIC
 TATIC_API_KEY = "c70181f2b648fdc2102714e8b5cb344d"
 
 currentPath = os.path.dirname(os.path.abspath(__file__))
 
-
+# 로컬 모듈 경로 설정
 # import UI
 UI_path = currentPath + "/UI"
 sys.path.append(UI_path)
+# UI 모듈 imports
 import leadMainWindow_UI
 import dayScheduleDyn_UI
 import dashboard_UI
@@ -68,6 +70,7 @@ import darkTheme
 # import class
 classPath = currentPath + "/class"
 sys.path.append(classPath)
+# 클래스 모듈 imports
 import dragDropListView as ddlv 
 import editMemberDialog as memberDialog
 import taskInfoDialog
@@ -122,7 +125,7 @@ class TeamTreeView(QTreeView):
 """
 
 # main
-class dxManager(QMainWindow):
+class DxManager(QMainWindow):
     def __init__(self,parent=None):
         QMainWindow.__init__(self,parent)
        
@@ -154,7 +157,7 @@ class dxManager(QMainWindow):
         # treeView 의 selectAll의 쓰레드풀 초기화 ########################################
         self.threadpool = QThreadPool()
         self.threadpool.setMaxThreadCount(QThread.idealThreadCount())
-        self.signals = loadData.load_workData_Signals()        
+        self.signals = loadData.LoadWorkDataSignals()        
         #################################################################################
 
 
@@ -1445,7 +1448,7 @@ class dxManager(QMainWindow):
             elif part == "M": part = "MMV"
             df_taskList["Part"][index] = part
 
-        self.editMandays = Edit_mandays.editMandays(self)
+        self.editMandays = Edit_mandays.EditMandays(self)
 
         # 판다스 데이터프레임의 컬럼 이름 가져오기
         tableColumn = list(df_taskList.columns)
@@ -2296,6 +2299,16 @@ class dxManager(QMainWindow):
 
 
 
+    def hide_completed_project_ui(self, ui_object, background_color="#252525"):
+        """완료된 프로젝트 UI를 숨기고 어두운 색상으로 설정"""
+        ui_object.hide()
+        ui_object.ui.frame_mandayStatus.setStyleSheet(f"QFrame {{ background-color : {background_color};}}")
+        ui_object.ui.label_project.setStyleSheet("color : #555555")
+        ui_object.ui.label_shots.setStyleSheet("color : #555555")
+        ui_object.ui.label_manday.setStyleSheet("color : #555555")
+        ui_object.ui.label_amount_shots.setStyleSheet("color : #555555")
+        ui_object.ui.label_amount_md.setStyleSheet("color : #555555")
+
     # 멤버의 이름을 더블클릭했을때 나오는 현재 프로젝트별 진행현형 다잉얼로그 창 실행
     def show_status_manday(self, index):
 
@@ -2310,7 +2323,7 @@ class dxManager(QMainWindow):
         # 현재 새로 드래그드롭 되어진 스케쥴까지 포함시켜야 해서 업데이트를 한번 실행해야함
         self.updateJson(0)
 
-        self.memberStatusDialog = status_projManday.projMandayDialog(self)
+        self.memberStatusDialog = status_projManday.ProjMandayDialog(self)
         self.memberStatusDialog.setWindowTitle("Project Status Dashboard")   
 
         itemName = self.teamTreeModel.data(index, Qt.DisplayRole)
@@ -2409,7 +2422,7 @@ class dxManager(QMainWindow):
                 app = int(shotStatus.split("/")[0])
                 all = int(shotStatus.split("/")[1])
 
-                projMandayUI = proj_Manday.projManday_()
+                projMandayUI = proj_Manday.ProjManday()
                 self.memberStatusDialog.ui.v_Layout_allManday.addWidget(projMandayUI)
                 projMandayUI.ui.label_project.setText(self.projects[proj][1])
                 projMandayUI.ui.label_progressBar_md.setValue(progressValue)
@@ -2445,13 +2458,7 @@ class dxManager(QMainWindow):
                 self.memberStatusDialog.projUI.append(projMandayUI)
 
                 if app == all: # 작업이 완료된 프로젝트는 숨기고, unhide시킬경우 어두운색깔로 표시되게 함
-                    projMandayUI.hide()
-                    projMandayUI.ui.frame_mandayStatus.setStyleSheet("QFrame { background-color : #252525;}")
-                    projMandayUI.ui.label_project.setStyleSheet("color : #555555")
-                    projMandayUI.ui.label_shots.setStyleSheet("color : #555555")                    
-                    projMandayUI.ui.label_manday.setStyleSheet("color : #555555")                                        
-                    projMandayUI.ui.label_amount_shots.setStyleSheet("color : #555555")                                        
-                    projMandayUI.ui.label_amount_md.setStyleSheet("color : #555555")                                        
+                    self.hide_completed_project_ui(projMandayUI, "#252525")                                        
 
 
 
@@ -2685,7 +2692,7 @@ class dxManager(QMainWindow):
 
 
                 # UI setup
-                projTeamMandayUI = proj_Manday.projManday_()
+                projTeamMandayUI = proj_Manday.ProjManday()
 
                 self.teamStatusDialog.projUI_list.append(projTeamMandayUI)
 
@@ -2725,13 +2732,7 @@ class dxManager(QMainWindow):
 
 
                 if appTasks == allTasks:
-                    projTeamMandayUI.hide()
-                    projTeamMandayUI.ui.frame_mandayStatus.setStyleSheet("QFrame { background-color : #303030;}")
-                    projTeamMandayUI.ui.label_project.setStyleSheet("color : #555555")
-                    projTeamMandayUI.ui.label_shots.setStyleSheet("color : #555555")                    
-                    projTeamMandayUI.ui.label_manday.setStyleSheet("color : #555555")                                        
-                    projTeamMandayUI.ui.label_amount_shots.setStyleSheet("color : #555555")                                        
-                    projTeamMandayUI.ui.label_amount_md.setStyleSheet("color : #555555")                         
+                    self.hide_completed_project_ui(projTeamMandayUI, "#303030")                         
 
 
 
@@ -2796,7 +2797,7 @@ class dxManager(QMainWindow):
 
     def show_team_status(self, index):
         
-        self.teamStatusDialog = status_teamManday.teamMandayDialog(self)
+        self.teamStatusDialog = status_teamManday.TeamMandayDialog(self)
         self.teamStatusDialog.setWindowTitle("Team Status Dashboard")
 
         itemName = self.teamTreeModel.data(index, Qt.DisplayRole)
@@ -2832,7 +2833,7 @@ class dxManager(QMainWindow):
         # 현재 선택한 멤버의 하위 모든 멤버의 이름 리스트 만들기
         self.make_orderList(index, orderList)
 
-        self.loadingProgressDialog = loadingProgress.loadingProgressDialog(self)
+        self.loadingProgressDialog = loadingProgress.LoadingProgressDialog(self)
         self.loadingProgressDialog.setModal(True)
         self.loadingProgressDialog.ui.progressBar_loading.setValue(0)
         self.loadingProgressDialog.setWindowTitle("Loading data")
@@ -3638,7 +3639,7 @@ class dxManager(QMainWindow):
             layout_child = listViewName + "_layout"
 
 
-            newListview = lv.scheduleListView(listview_labelName, listViewName, layout_parent, layout_child, scaleUI, self, self.manager, self.dayScheduleFrame, self)
+            newListview = lv.ScheduleListView(listview_labelName, listViewName, layout_parent, layout_child, scaleUI, self, self.manager, self.dayScheduleFrame, self)
 
 
             # 새로 생성한 리스트뷰에 드래그 드롭이 발생한경우, self.get_dropEvent 메서드를 실행시킴
@@ -4321,7 +4322,7 @@ class dxManager(QMainWindow):
 
 
         taskInfoJson = self.import_Json(currentPath+"/.task_info", userID+"_task_info.json")
-        self.taskInfomationDialog = taskInfoDialog.taskInfoDialog(self)
+        self.taskInfomationDialog = taskInfoDialog.TaskInfoDialog(self)
         self.taskInfomationDialog.setWindowTitle("Task Information")        
 
         start=""
@@ -4542,7 +4543,7 @@ class dxManager(QMainWindow):
             layout_child = listViewName + "_layout"
 
             # 리스트뷰 생성
-            newListview = lv.scheduleListView(labelName, listViewName, layout_parent, layout_child, 300, self, self.manager, self.dayScheduleFrame, self)
+            newListview = lv.ScheduleListView(labelName, listViewName, layout_parent, layout_child, 300, self, self.manager, self.dayScheduleFrame, self)
 
         
             # 새로 생성한 리스트뷰에 드래그 드롭이 발생한경우, self.get_dropEvent 메서드를 실행시킴
@@ -5898,7 +5899,7 @@ class dxManager(QMainWindow):
             sortOrder[i] = old_model._sort_order
             sortColumn[i] = old_model._sort_column
 
-            shotlist_model = ddlv.dragDropModel(tuple_tasks, sortColumn[i])
+            shotlist_model = ddlv.DragDropModel(tuple_tasks, sortColumn[i])
             listViews[i].setModel(shotlist_model)
 
             # 이전 모델 삭제
@@ -5947,7 +5948,7 @@ class dxManager(QMainWindow):
                     sortOrder[i] = old_model._sort_order
                     sortColumn[i] = old_model._sort_column
 
-                    shotlist_model = ddlv.dragDropModel(emptyTasks, sortColumn[i])
+                    shotlist_model = ddlv.DragDropModel(emptyTasks, sortColumn[i])
                     listViews[i].setModel(shotlist_model)
 
                     self.sortScheduleListview(shotlist_model, sortOrder[i], sortColumn[i])
@@ -6101,10 +6102,19 @@ class dxManager(QMainWindow):
         #print (refereshJsonData)
         
 
+        # 기존 모델에서 정렬 정보 먼저 수집
         sortOrder = {}
         sortColumn = {}
-        inData_listViews = []
+        for i in range(len(listViewDate)):
+            old_model = listViews[i].model()
+            if old_model:
+                sortOrder[i] = old_model._sort_order
+                sortColumn[i] = old_model._sort_column
+            else:
+                sortOrder[i] = Qt.AscendingOrder
+                sortColumn[i] = 0
 
+        inData_listViews = []
 
         for i in range(len(listViewDate)):
 
@@ -6141,7 +6151,7 @@ class dxManager(QMainWindow):
             #sortOrder.append(old_model._sort_order)
             #sortColumn.append(old_model._sort_column)
 
-            shotlist_model = ddlv.dragDropModel(tuple_tasks, sortColumn[i])
+            shotlist_model = ddlv.DragDropModel(tuple_tasks, sortColumn[i])
             #shotlist_model._sort_order = sortOrder
             listViews[i].setModel(shotlist_model)
 
@@ -6168,7 +6178,7 @@ class dxManager(QMainWindow):
                     sortOrder[i] = old_model._sort_order
                     sortColumn[i] = old_model._sort_column
 
-                    shotlist_model = ddlv.dragDropModel(emptyTasks, sortColumn[i])
+                    shotlist_model = ddlv.DragDropModel(emptyTasks, sortColumn[i])
                     listViews[i].setModel(shotlist_model)
 
                     self.sortScheduleListview(shotlist_model, sortOrder[i], sortColumn[i])
@@ -6686,11 +6696,17 @@ class dxManager(QMainWindow):
                 # 이번주 마감인 태스크들의 온/오프
                 taskColor = model.data(index, Qt.BackgroundRole) # 배경색 가져오기
 
-                if (taskColor.red() != 94 and taskColor.green() != 29 and  taskColor.blue() != 35) and self.deadLine_flag==1:
-                    listView.setRowHidden(row, True)
+                # taskColor가 None인 경우 안전 처리
+                if taskColor is not None:
+                    if (taskColor.red() != 94 and taskColor.green() != 29 and  taskColor.blue() != 35) and self.deadLine_flag==1:
+                        listView.setRowHidden(row, True)
 
-                elif (taskColor.red() != 94 and taskColor.green() != 29 and  taskColor.blue() != 35) and self.deadLine_flag==0:
-                    listView.setRowHidden(row, False)                
+                    elif (taskColor.red() != 94 and taskColor.green() != 29 and  taskColor.blue() != 35) and self.deadLine_flag==0:
+                        listView.setRowHidden(row, False)
+                else:
+                    # taskColor가 None인 경우 기본 동작 (데드라인 플래그에 따라 처리)
+                    if self.deadLine_flag==0:
+                        listView.setRowHidden(row, False)                
 
 
 
@@ -7785,14 +7801,17 @@ class dxManager(QMainWindow):
 
     # 제이슨으로 저장된 리더의 팀멤버가 있다면 정보를 읽어옴
     def getTeamInfo(self, member): 
-
+        """팀 멤버의 정보를 JSON 파일에서 로드합니다."""
         teamInfoPath = currentPath + "/.team_Info"
-        teamInfoJson = os.path.join(teamInfoPath, member +"_teamInfo.json")
+        teamInfoJson = os.path.join(teamInfoPath, f"{member}_teamInfo.json")
 
         teamInfoData = []
-        if (os.path.exists(teamInfoJson)):
-            with open(teamInfoJson) as f:
-                teamInfoData = json.load(f)
+        if os.path.exists(teamInfoJson):
+            try:
+                with open(teamInfoJson, 'r', encoding='utf-8') as f:
+                    teamInfoData = json.load(f)
+            except (json.JSONDecodeError, IOError) as e:
+                print(f"Error loading team info for {member}: {e}")
         
         return teamInfoData
 
@@ -7816,17 +7835,6 @@ class dxManager(QMainWindow):
 
 
 
-    def get_teamInfo(self, member):
-
-        teamInfoPath = currentPath + "/.team_Info"
-        teamInfoJson = os.path.join(teamInfoPath, member+"_teamInfo.json")
-
-        teamInfoData = []
-        if (os.path.exists(teamInfoJson)):
-            with open(teamInfoJson) as f:
-                teamInfoData = json.load(f)
-        
-        return teamInfoData
 
 
 
@@ -8164,7 +8172,7 @@ class dxManager(QMainWindow):
 
         added_memberList = []
 
-        member_teamInfo = self.get_teamInfo(teamMember)
+        member_teamInfo = self.getTeamInfo(teamMember)
         if member_teamInfo != []:
             for info_member in list(member_teamInfo[0].keys()):
                 allInfos[0][info_member] = member_teamInfo[0][info_member]
@@ -8848,7 +8856,7 @@ class dxManager(QMainWindow):
 
             taskList = list(taskListDic.keys())
 
-            shotlist_model = ddlv.dragDropModel(taskList, containDic, self.sort_column) 
+            shotlist_model = ddlv.DragDropModel(taskList, containDic, self.sort_column) 
             self.shotListview.setModel(shotlist_model)
 
 
@@ -9675,7 +9683,7 @@ class dxManager(QMainWindow):
             conn_shot_sche = connect_shot_schedule
 
             i, member = self.pending_workers.pop(0)
-            worker = loadData.loading_workData(i, member, taskInfo, selectedProj, editedTasks_json, self.signals, conn_shot_sche, self.reload_tatic, self)
+            worker = loadData.LoadingWorkData(i, member, taskInfo, selectedProj, editedTasks_json, self.signals, conn_shot_sche, self.reload_tatic, self)
             self.active_workers.append(worker)
             self.threadpool.start(worker)
 
@@ -9988,8 +9996,8 @@ if __name__ == "__main__":
     app.setPalette(darkTheme.set_palette())
     app.setStyleSheet(darkTheme.set_styleSheet())
 
-    dxManager = dxManager()
-    dxManager.setWindowTitle("dxManager")
-    dxManager.show()
+    dx_manager = DxManager()
+    dx_manager.setWindowTitle("dxManager")
+    dx_manager.show()
     app.exec_()
 

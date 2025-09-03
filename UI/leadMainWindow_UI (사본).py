@@ -235,7 +235,7 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_3.addLayout(self.horizontalLayout_3)
 
-        self.shotListView = DD.dragListView(self.leftSide_frame)
+        self.shotListView = DD.DragListView(self.leftSide_frame)
         self.shotListView.setObjectName(u"shotListView")
         sizePolicy4 = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
         sizePolicy4.setHorizontalStretch(0)

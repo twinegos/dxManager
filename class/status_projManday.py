@@ -4,7 +4,7 @@ from PySide2.QtWidgets import *
 
 import status_projManday_UI
 
-class projMandayDialog(QDialog):
+class ProjMandayDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
 

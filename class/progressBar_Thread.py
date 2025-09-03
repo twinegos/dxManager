@@ -10,7 +10,7 @@ class ProgressBar_Thread(QThread):
     result_ready_signal = Signal(list)
 
 
-    def __init__(self, index, total_app_tasks, total_tasks, total_act_mandays, total_mandays, team_projManday, team_shotStatus, team_wipStatus, orderList, dxManager, parent=None):
+    def __init__(self, index, total_app_tasks, total_tasks, total_act_mandays, total_mandays, team_projManday, team_shotStatus, team_wipStatus, orderList, dx_manager, parent=None):
         super().__init__(parent)
         #self.task_time = task_time
         self.index = index
@@ -30,10 +30,10 @@ class ProgressBar_Thread(QThread):
         self.projManday = {}
         self.projShotStatus = {}
         self.teamWipStatus = {}
-        self.dxManager = dxManager
+        self.dx_manager = dx_manager
         self.results = []
 
-        self.dxManager.update_progress = self.report_progress
+        self.dx_manager.update_progress = self.report_progress
 
     def report_progress(self, value):
         self.progress_signal.emit(value)
@@ -41,7 +41,7 @@ class ProgressBar_Thread(QThread):
 
     def run(self):
         total_steps = 100
-        self.all_app, self.all_tasks, self.all_actManday, self.all_manday, self.projManday, self.projShotStatus, self.teamWipStatus = self.dxManager.get_child_items(self.index, self.total_app_tasks, self.total_tasks, self.total_act_mandays, self.total_mandays, self.team_projManday, self.team_shotStatus, total_steps, self.team_wipStatus, self.orderList)
+        self.all_app, self.all_tasks, self.all_actManday, self.all_manday, self.projManday, self.projShotStatus, self.teamWipStatus = self.dx_manager.get_child_items(self.index, self.total_app_tasks, self.total_tasks, self.total_act_mandays, self.total_mandays, self.team_projManday, self.team_shotStatus, total_steps, self.team_wipStatus, self.orderList)
         self.results = [self.all_app, self.all_tasks, self.all_actManday, self.all_manday, self.projManday, self.projShotStatus, self.teamWipStatus]
         
         self.result_ready_signal.emit(self.results)

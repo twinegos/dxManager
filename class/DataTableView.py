@@ -19,9 +19,9 @@ currentPath = os.path.dirname(os.path.abspath(__file__))
 
 
 
-class dataTableModel(QAbstractTableModel):
+class DataTableModel(QAbstractTableModel):
     def __init__(self, data):
-        super(dataTableModel, self).__init__()
+        super(DataTableModel, self).__init__()
         self._data = data
 
     def rowCount(self, parent):

@@ -4,7 +4,7 @@ from PySide2.QtWidgets import *
 
 import edit_mandays_UI
 
-class editMandays(QDialog):
+class EditMandays(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
 

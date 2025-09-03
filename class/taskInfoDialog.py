@@ -5,7 +5,7 @@ from PySide2.QtWidgets import *
 import task_info_UI
 
 
-class taskInfoDialog(QDialog):
+class TaskInfoDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
 

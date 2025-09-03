@@ -7,11 +7,11 @@ from PySide2.QtWidgets import *
 class updateUserInfoThread(QThread):
     completed_signal = Signal()
 
-    def __init__(self, members, dxManager, parent=None):
+    def __init__(self, members, dx_manager, parent=None):
         super().__init__(parent)
-        self.dxManager = dxManager
+        self.dx_manager = dx_manager
         self.members = members
 
     def run(self):
-        self.dxManager.updateUserInfo(self.members)
+        self.dx_manager.updateUserInfo(self.members)
 

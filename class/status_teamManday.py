@@ -4,7 +4,7 @@ from PySide2.QtWidgets import *
 
 import status_teamManday_UI
 
-class teamMandayDialog(QDialog):
+class TeamMandayDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
 

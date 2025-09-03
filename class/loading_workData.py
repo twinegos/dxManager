@@ -5,9 +5,9 @@ from PySide2.QtWidgets import *
 
 
 
-class loading_workData(QRunnable):
+class LoadingWorkData(QRunnable):
 
-    def __init__(self, task_id, member, taskInfo, projs, editedTasks_json, signals, conn_shot_sche, loading_tatic, dxManager):
+    def __init__(self, task_id, member, taskInfo, projs, editedTasks_json, signals, conn_shot_sche, loading_tatic, dx_manager):
         super().__init__()
         self.task_id = task_id
         self.member = member
@@ -16,7 +16,7 @@ class loading_workData(QRunnable):
         self.editedTasks_json = editedTasks_json
         self.conn_shot_sche = conn_shot_sche
         self.loading_tatic = loading_tatic
-        self.dxManager = dxManager
+        self.dx_manager = dx_manager
         self.signals = signals#load_workData_Signals()
         self.is_finished = False
 
@@ -27,17 +27,17 @@ class loading_workData(QRunnable):
         global connect_shot_schedule
 
         if self.loading_tatic == 0:
-            if self.member in list(self.dxManager.taskInfoJson.keys()):
-                self.taskInfo[self.member] = self.dxManager.taskInfoJson[self.member]                    
+            if self.member in list(self.dx_manager.taskInfoJson.keys()):
+                self.taskInfo[self.member] = self.dx_manager.taskInfoJson[self.member]                    
 
-            elif self.member not in list(self.dxManager.taskInfoJson.keys()): 
-                self.taskInfo[self.member] = self.dxManager.getTaskInfo(self.member)
-                self.dxManager.taskInfoJson[self.member] = self.taskInfo[self.member]
-                #self.dxManager.export_Json(currentPath+"/.task_info", userID+"_task_info.json", self.dxManager.taskInfoJson)        
+            elif self.member not in list(self.dx_manager.taskInfoJson.keys()): 
+                self.taskInfo[self.member] = self.dx_manager.getTaskInfo(self.member)
+                self.dx_manager.taskInfoJson[self.member] = self.taskInfo[self.member]
+                #self.dx_manager.export_Json(currentPath+"/.task_info", userID+"_task_info.json", self.dx_manager.taskInfoJson)        
 
         elif self.loading_tatic == 1:
-                self.taskInfo[self.member] = self.dxManager.getTaskInfo(self.member)
-                self.dxManager.taskInfoJson[self.member] = self.taskInfo[self.member]
+                self.taskInfo[self.member] = self.dx_manager.getTaskInfo(self.member)
+                self.dx_manager.taskInfoJson[self.member] = self.taskInfo[self.member]
 
 
         member_shot = {}
@@ -66,7 +66,7 @@ class loading_workData(QRunnable):
             for i in range(len(self.taskInfo[self.member])):
                 projCode = self.taskInfo[self.member][i]["project_code"]
 
-                if projCode == self.dxManager.projects[sel_proj.lower()][0]:
+                if projCode == self.dx_manager.projects[sel_proj.lower()][0]:
 
                     shot = self.taskInfo[self.member][i]["extra_code"]
                     bd_manday = (self.taskInfo[self.member][i]["bid_manday"])
@@ -120,7 +120,7 @@ class loading_workData(QRunnable):
                     for editTask in self.editedTasks_json:
 
                         editTask_proj = ""
-                        for proj_low in self.dxManager.projects:
+                        for proj_low in self.dx_manager.projects:
                             if proj_low[1] == editTask[3]:
                                 editTask_proj = proj_low[1]                                    
 
@@ -159,10 +159,10 @@ class loading_workData(QRunnable):
 
             # conn_shot_sche의 태스크들중 비디 맨데이가 수정된 태스크는 수정된 맨데이를 적용
             taskList_connectSchedule = list(self.conn_shot_sche.keys())
-            editedTasks = [editTask for editTask in self.editedTasks_json for task in taskList_connectSchedule  if task[1]==editTask[0] and task[4]==editTask[2] and self.dxManager.projects[task[0].lower()][1] ==  editTask[3]]
+            editedTasks = [editTask for editTask in self.editedTasks_json for task in taskList_connectSchedule  if task[1]==editTask[0] and task[4]==editTask[2] and self.dx_manager.projects[task[0].lower()][1] ==  editTask[3]]
 
             for taskName in editedTasks:
-                scheduleTask = [scheduleTaskName for scheduleTaskName in self.conn_shot_sche if scheduleTaskName[1]== taskName[0] and scheduleTaskName[4]== taskName[2] and self.dxManager.projects[scheduleTaskName[0].lower()][1] ==  taskName[3]]
+                scheduleTask = [scheduleTaskName for scheduleTaskName in self.conn_shot_sche if scheduleTaskName[1]== taskName[0] and scheduleTaskName[4]== taskName[2] and self.dx_manager.projects[scheduleTaskName[0].lower()][1] ==  taskName[3]]
 
                 if len(scheduleTask) == 1:
                     list_scheduleTask = list(scheduleTask[0])
@@ -197,6 +197,6 @@ class loading_workData(QRunnable):
         QApplication.restoreOverrideCursor()
 
 
-class load_workData_Signals(QObject):
+class LoadWorkDataSignals(QObject):
     result = Signal(object) # 각 worker가 개별적으로 결과를 emit 할때
     finished = Signal(dict) # 모든 worker 이 끝나고 전체 결과를 한번에 emit 할때

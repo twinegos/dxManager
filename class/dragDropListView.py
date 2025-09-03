@@ -23,10 +23,10 @@ class CustomSortProxyModel(QSortFilterProxyModel):
 
 
 
-class dragDropModel(QAbstractListModel):
+class DragDropModel(QAbstractListModel):
 
     def __init__(self, data=None, parent=None, sortColumn=None):
-        super(dragDropModel, self).__init__()
+        super(DragDropModel, self).__init__()
         self._data = data or []
         self._background_colors = {}
         self._sort_order = Qt.AscendingOrder
@@ -485,9 +485,9 @@ class ProgressDelegate(QStyledItemDelegate):
 
 
 
-class dragListView(QListView):
+class DragListView(QListView):
     def __init__(self, parent=None):
-        super(dragListView, self).__init__(parent)
+        super(DragListView, self).__init__(parent)
         self.setDragEnabled(True)
         self.setSelectionMode(QListView.ExtendedSelection)        
         #self.setStyleSheet("QListView { background-color: lightblue; }")
@@ -550,13 +550,13 @@ class dragListView(QListView):
 
 
 
-class dropListView(QListView):
+class DropListView(QListView):
 
     itemsDropped = Signal(list, str)
 
     #def __init__(self, model=None):
     def __init__(self, manager, container, parentLayout, mainLoop):#, model=None):
-        super(dropListView, self).__init__()
+        super(DropListView, self).__init__()
 
         self.mainLoop = mainLoop
         self.manager = manager
@@ -568,7 +568,7 @@ class dropListView(QListView):
         #self.setStyleSheet("QListView { background-color: lightblue; }")
         self.setMinimumSize(QSize(200,0))
 
-        model = dragDropModel()
+        model = DragDropModel()
         self.setModel(model)
         delegate = ProgressDelegate()
         self.setItemDelegate(delegate)

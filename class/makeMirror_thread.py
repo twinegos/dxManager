@@ -9,14 +9,14 @@ class WorkerThread_makeMirror(QThread):
     finished = Signal()
     error = Signal(str)
 
-    def __init__(self, jsonData, dxManager, parent=None):
+    def __init__(self, jsonData, dx_manager, parent=None):
         super().__init__(parent)
-        self.dxManager = dxManager
+        self.dx_manager = dxManager
         self.jsonData = jsonData
 
     def run(self):
         try:
-            self.dxManager.makeMirrorSchedule(self.jsonData)
+            self.dx_manager.makeMirrorSchedule(self.jsonData)
             self.finished.emit()
 
         except Exception as e:

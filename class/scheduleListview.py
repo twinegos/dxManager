@@ -8,7 +8,7 @@ import dragDropListView as ddlv # ddlv : drag and drop listView
 
 
 # 스케쥴 리스트뷰 셋업
-class scheduleListView(QWidget):      #, label, listView, parentLayout, childLayout, scaleUI):
+class ScheduleListView(QWidget):      #, label, listView, parentLayout, childLayout, scaleUI):
 
     def __init__(self, label, listView, parentLayout, childLayout, scaleUI, main, manager, parent=None, mainLoop=None):
         super().__init__()
@@ -134,7 +134,7 @@ class scheduleListView(QWidget):      #, label, listView, parentLayout, childLay
         self.focusLayout.setContentsMargins(0,0,0,0)
 
         # 리스트뷰
-        self.listView_day = ddlv.dropListView(self.manager, self.listviewFrame, self.listViewLayout, mainLoop)#, self.listviewFrame)
+        self.listView_day = ddlv.DropListView(self.manager, self.listviewFrame, self.listViewLayout, mainLoop)#, self.listviewFrame)
         self.listView_day.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.listView_day.setEditTriggers(QAbstractItemView.NoEditTriggers) # 더블클릭시에 에딧모드로 들어가지 않도록 함
         self.listView_day.setObjectName(listView)

@@ -65,15 +65,185 @@ Phase 1부터 시작하여 점진적으로 개선:
 
 ## Copilot 협업 설정 (다음 작업 시 진행)
 
-### 추가 설정 필요 사항
-1. **Copilot 언어별 활성화 확인**
-   - Ctrl/Cmd + Shift + P → "Copilot: Configure" 실행
-   - Python, JSON 등 프로젝트 언어들 활성화 상태 확인
+### 1. VSCode 설정 (.vscode/settings.json 생성 필요)
+```json
+{
+  "github.copilot.enable": {
+    "python": true,
+    "json": true,
+    "plaintext": true,
+    "markdown": true
+  },
+  "github.copilot.advanced": {
+    "length": 500,
+    "temperature": 0.1
+  },
+  "github.copilot.inlineSuggest.enable": true,
+  "editor.inlineSuggest.enabled": true,
+  "editor.suggestSelection": "first"
+}
+```
 
-2. **인라인 제안 최적화 설정**
-   - settings.json에 github.copilot 관련 설정 추가
-   - 더 정확하고 긴 제안을 받기 위한 파라미터 조정
+### 2. 확인 필요한 설정들
+- **명령 팔레트**: Ctrl/Cmd + Shift + P → "Copilot: Configure"
+- **인라인 채팅**: Ctrl/Cmd + Shift + P → "Inline Chat: Configure Inline Chat"
+- **상태 확인**: VSCode 하단 상태바에서 Copilot 아이콘 클릭
 
-### 작업 시 팁
-- .claude 파일을 VSCode에서 열어두면 Copilot이 프로젝트 컨텍스트를 더 잘 이해함
-- 리팩토링 시 주석으로 의도를 명확히 작성하면 더 정확한 코드 제안을 받을 수 있음
+### 3. dxManager 프로젝트 특화 설정
+- **파일 연관성**: .py, .json, .md 파일에서 Copilot 활성화
+- **컨텍스트 최적화**: 대용량 파일(dxManager.py) 작업 시 성능 고려
+- **PySide2 지원**: Qt 관련 코드 제안 품질 향상
+
+### 4. 작업 시 팁
+- .claude 파일을 VSCode에서 열어두면 프로젝트 컨텍스트 제공
+- 리팩토링 시 "# TODO: 이 함수를 모듈로 분리" 같은 명확한 주석 작성
+- 함수/클래스명을 먼저 작성하고 Tab으로 구현부 자동완성 활용
+
+## 외부 시스템 테스트 복사 작업
+
+### 개요
+개발한 코드를 네트워크상의 외부 시스템에서 테스트하기 위해 수정된 파일들을 복사하는 작업이 필요합니다.
+
+### 복사할 파일 목록
+다음 파일들은 수정 빈도가 높으므로 외부 테스트 시 항상 복사해야 합니다:
+
+#### 1. 메인 파일
+- `dxManager.py` (메인 애플리케이션 파일)
+
+#### 2. class 폴더 전체
+```
+class/
+├── DataTableView.py
+├── Edit_mandays.py
+├── dragDropListView.py
+├── editMemberDialog.py
+├── leadMainWindow.py
+├── loadingProgress.py
+├── loading_workData.py
+├── makeMirror_thread.py
+├── multiColorProgressBar.py
+├── progressBar_Thread.py
+├── proj_Manday.py
+├── readOnlyDelegate.py
+├── scheduleListview.py
+├── status_projManday.py
+├── status_teamManday.py
+├── taskInfoDialog.py
+├── updateUserInfo_Thread.py
+```
+
+#### 3. UI 폴더 (수정 시)
+```
+UI/
+├── leadMainWindow_UI.py
+├── leadMainWindow_UI (사본).py
+├── daySchedule_UI.py
+└── (기타 수정된 UI 파일들)
+```
+
+### 복사 명령어 템플릿
+사용자가 "외부 테스트 복사해줘" 또는 유사한 요청을 할 때:
+
+1. **전체 복사**: 모든 수정된 파일들을 한 번에 복사
+2. **선택적 복사**: 특정 파일이나 폴더만 복사
+3. **증분 복사**: 최근 수정된 파일들만 복사
+
+### 자동화 스크립트 예시
+```bash
+# 메인 파일 및 class 폴더 복사
+cp dxManager.py [외부시스템경로]/
+cp -r class/ [외부시스템경로]/class/
+
+# UI 파일 복사 (필요시)
+cp UI/leadMainWindow_UI.py [외부시스템경로]/UI/
+cp "UI/leadMainWindow_UI (사본).py" [외부시스템경로]/UI/
+```
+
+### 주의사항
+- 외부 시스템 경로는 네트워크 연결 상태에 따라 달라질 수 있음
+- 복사 전 파일 백업 권장
+- 권한 문제 발생 시 sudo 사용 필요할 수 있음
+- __pycache__ 폴더는 복사하지 않도록 주의 (외부 시스템에서 런타임 에러 발생 가능)
+
+### 외부 시스템 경로
+- **대상 경로**: `/opt/stdrepo/ANI/Artist/Moon_sungoh/dxManager_sh`
+
+### 네트워크 연결 확인 방법
+```bash
+test -d /opt/stdrepo/ANI/Artist/Moon_sungoh/dxManager_sh && echo "경로 접근 가능" || echo "경로 접근 불가능"
+```
+
+### 권한 제한사항
+- **가능**: 경로 존재 여부 확인 (`test -d` 명령어)
+- **불가능**: 파일 읽기/쓰기/복사 (`ls`, `cp`, `mv` 등)
+- **이유**: 보안 정책으로 인한 네트워크 경로 권한 제한
+
+### 사용자 요청 시 대응 방법
+사용자가 "외부 테스트 복사" 요청 시:
+1. **연결 상태 확인**: `test -d` 명령어로 경로 접근 가능 여부 체크
+2. **파일 목록 제공**: 최근 수정된 파일들 목록 제공
+3. **파인더 복사 안내**: 사용자가 직접 파인더에서 복사하도록 안내
+4. **주의사항 안내**: __pycache__ 폴더 제외, 덮어쓰기 방식 등
+
+### 복사 작업 절차 (정확한 순서)
+1. Assistant가 네트워크 연결 상태 확인
+2. Assistant가 수정된 파일 목록 제공
+3. **Assistant가 현재 프로젝트 파인더 창 먼저 열기** (`open /Users/sungoh.moon/Desktop/work/AI_code/dxManager`)
+4. 사용자가 복사할 파일들 선택 후 Cmd+C (복사)
+5. **사용자 복사 완료 시 Assistant가 외부 경로 파인더 창 열기** (`open /opt/stdrepo/ANI/Artist/Moon_sungoh/dxManager_sh`)
+6. 사용자가 외부 경로에서 Cmd+V (붙여넣기/덮어쓰기)
+7. 복사 완료 후 외부 시스템에서 테스트 진행
+
+### 중요: 파인더 열기 순서
+- **먼저**: 현재 프로젝트 파인더 (복사용)
+- **나중에**: 외부 경로 파인더 (붙여넣기용)
+
+## 중복 코드 리팩토링 상세 기록 (2025-09-03)
+
+### 성공적으로 완료된 중복 코드 수정
+
+#### 1. UI 숨김 로직 중복 제거 ✅
+- **위치**: 완료된 프로젝트 UI 숨김 처리
+- **문제**: 12라인의 동일한 UI 숨김 코드가 2곳에서 반복
+- **해결**: `hide_completed_project_ui()` 통합 메소드 생성 (dxManager.py:2302)
+- **효과**: 12라인 → 1라인 호출로 단축 (92% 코드 감소)
+
+#### 2. JSON 파일 로딩 로직 개선 ✅
+- **위치**: 팀 정보 JSON 파일 읽기
+- **문제**: 중복된 파일 로딩 로직, 에러 처리 부재
+- **해결**: `getTeamInfo()` 메소드 개선 (dxManager.py:7783)
+- **추가**: UTF-8 인코딩, 예외 처리, 로깅 기능
+- **효과**: 코드 안정성 및 유지보수성 향상
+
+### 실패/취소된 중복 코드 수정
+
+#### 3. 리스트뷰 모델 설정 로직 ❌
+- **위치**: 
+  - 첫 번째: dxManager.py:5896-5909 (move_sideways 함수)
+  - 두 번째: dxManager.py:6146-6165 (refereshListViews 함수)
+  - 세 번째: dxManager.py:8835-8863 (reloadShotListView 함수)
+- **문제**: 리스트뷰 모델 생성/설정 로직이 3곳에서 40-50라인 중복
+- **시도한 해결책**: `setup_listview_model()` 통합 메소드 생성
+- **실패 원인**: 
+  - 매개변수 복잡성 (contain_dic, set_view, set_background_color)
+  - 스케줄 리스트뷰와 샷 리스트뷰의 서로 다른 요구사항
+  - 다양한 에러 발생 (KeyError, 함수 시그니처 불일치)
+- **최종 결정**: **원래 중복 코드 상태로 복구**
+- **교훈**: 복잡한 UI 로직은 통합보다는 개별 최적화가 적합할 수 있음
+
+### 추가 에러 수정
+
+#### taskColor None 에러 수정 ✅
+- **위치**: dxManager.py:6670-6680 (set_listView_view 메소드)
+- **문제**: `'NoneType' object has no attribute 'red'`
+- **해결**: 안전한 None 체크 추가
+
+#### sortColumn KeyError 수정 ✅  
+- **위치**: dxManager.py:6101-6108 (refereshListViews 메소드)
+- **문제**: `KeyError: 0` (정렬 정보 초기화 누락)
+- **해결**: 기존 모델에서 정렬 정보 사전 수집
+
+### 다음 작업 시 참고사항
+1. **성공 패턴**: 단순하고 독립적인 로직은 통합 메소드로 효과적
+2. **주의 패턴**: UI 관련 복잡한 로직은 개별 관리가 안전
+3. **검증 방법**: 외부 시스템 테스트로 실제 동작 확인 필수

@@ -16,13 +16,13 @@ sys.path.append(Path_UI)
 import leadMainWindow_UI
 
 
-class leadMainWindow(QMainWindow):
+class LeadMainWindow(QMainWindow):
     def __init__(self):
-        super(leadMainWindow, self).__init__()
+        super(LeadMainWindow, self).__init__()
 
         self.ui_leadWin = leadMainWindow_UI.Ui_MainWindow()
         self.ui_leadWin.setupUi(self)        
 
 
 
-        self.ui_leadWin.shotListView = DD.dragListView(self.ui_leadWin.leftSide_frame)
+        self.ui_leadWin.shotListView = DD.DragListView(self.ui_leadWin.leftSide_frame)
