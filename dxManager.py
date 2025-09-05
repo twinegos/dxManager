@@ -1,6 +1,6 @@
 # encoding:utf-8
 
-# Standard library imports
+# 표준 라이브러리 임포트
 import os
 import sys
 import time
@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from multiprocessing import Process
 from types import MethodType
 
-# Third-party imports
+# 서드파티 라이브러리 임포트
 import pandas as pd
 import openpyxl
 import numpy as np
@@ -25,37 +25,32 @@ from PySide2.QtGui import *
 
 from PySide2 import QtWidgets
 
-# External library imports
-dxConfig_path = "/others/backstage/dcc/packages/ext/pylibs/3.7/lib/python3.7/site-packages"
-sys.path.append(dxConfig_path)
+# 설정 파일 임포트
+import config
+
+# 외부 라이브러리 임포트
 import dxConfig
 import requests
 # 데이터베이스 연결 설정
 DBIP = dxConfig.getConf("DB_IP")
 client = MongoClient(DBIP)
+# KEEP: 데이터베이스 테스트 코드 - 삭제 금지
 #db = client['SCHEDULE_test']
 #collection = db['test']
 #collection.insert_one({'a':1})
 #client.drop_database('SCHEDULE_test')
 
 
-################################################################################################################## 
-
-############# 9203라인 수정함 - 컨텍스트 네임 모두 표시되게 함 ---  에러 확인하기
-############# 샷리스트뷰 위아래 이동 
-############# 스케쥴 리스트뷰 갯수 슬라이더바
-
-################################################################################################################## 
 
 # 상수 정의
 #TACTIC
-TATIC_API_KEY = "c70181f2b648fdc2102714e8b5cb344d"
+TATIC_API_KEY = config.TACTIC_API_KEY
 
-currentPath = os.path.dirname(os.path.abspath(__file__))
+currentPath = config.CURRENT_PATH
 
 # 로컬 모듈 경로 설정
-# import UI
-UI_path = currentPath + "/UI"
+# UI 모듈 임포트
+UI_path = config.UI_PATH
 sys.path.append(UI_path)
 # UI 모듈 imports
 import leadMainWindow_UI
@@ -67,7 +62,7 @@ import darkTheme
 
 
 
-# import class
+# 클래스 모듈 임포트
 classPath = currentPath + "/class"
 sys.path.append(classPath)
 # 클래스 모듈 imports
@@ -87,24 +82,15 @@ import updateUserInfo_Thread as updateUser
 import readOnlyDelegate as readOnly
 import loading_workData as loadData
 
-userID = os.popen("logname").read().strip()
+userID = config.get_user_id()
 
-# 회의실용
-if userID == "conf3":
-    userID = "sungoh.moon"
-
-# 테스트용
-#if userID == "sungoh.moon":
-#    userID = "sinwoo.lee"
-
-# import json schedule file
+# JSON 스케줄 파일 임포트
 jsonData = []
-jsonFilePath = currentPath+"/.scheduleData"
-jsonFile = os.path.join(jsonFilePath, userID+"_Data.json")
+jsonFilePath = config.SCHEDULE_DATA_PATH
+jsonFile = config.get_schedule_data_file(userID)
 
 
-# global
-#memberCache_ = {} # 태스크정보를 읽어온 유저들의 한글이름과 영어이름을 짝지어 저장
+# 전역 변수
 dropData = {} # 드래그 드랍으로 받은 데이타와 받은 날짜
 teamTreeHierarchy = {} # 팀원과 팀원의 하위멤버의 하이라키 구조를 저장
 teamInfo_ = [] # 현재유저 하위의 모든 팀원의 정보를 저장
@@ -117,14 +103,8 @@ DOUBLE_CLICK_DELAY = 110 # 멤버 트리뷰 더블클릭 간격
 
 
 
-"""
-class TeamTreeView(QTreeView):
-    def mousePressEvent(self, event):
-        super.mousePressEvent(event)
-        event.accept()
-"""
 
-# main
+# 메인 클래스
 class DxManager(QMainWindow):
     def __init__(self,parent=None):
         QMainWindow.__init__(self,parent)
@@ -175,7 +155,7 @@ class DxManager(QMainWindow):
 
 
         icon = QIcon()
-        icon.addFile(currentPath + "/icons/view-refresh-symbolic.symbolic.png", QSize(), QIcon.Normal, QIcon.Off)
+        icon.addFile(config.REFRESH_ICON, QSize(), QIcon.Normal, QIcon.Off)
         self.ui.reload_Button.setIcon(icon)
 
         self.ui.splitter_2.setSizes([200,300])
@@ -205,17 +185,15 @@ class DxManager(QMainWindow):
 
         self.resize(1700, 900)
 
-        # Variable declaration for UI
+        # UI 변수 선언
         ##############################################################
         self.menu_Edit = self.ui.actionEdit_member
 
-        #self.customTreeView = TeamTreeView()
-        self.teamTree = self.ui.team_treeView
 
+        self.teamTree = self.ui.team_treeView
         self.preferenceMenu = self.ui.menuPreferences
 
         self.leftSideInfoFrm = self.ui.leftSide_frame
-        #self.saveBtnFrm = self.ui.saveBtn_frm
 
         self.artistLabel = self.ui.artistNameLabel
         self.artistLabel_EN = self.ui.artistNameLabel_EN
@@ -227,7 +205,7 @@ class DxManager(QMainWindow):
         self.scheduleViewBtn = self.ui.scheduleView_btn
         self.artistFrame = self.ui.frame_2
 
-        # 내용정리 될때까지 하이드시키기 #################
+        # KEEP: 내용정리 될때까지 하이드시키기 #################
         self.dashboardViewBtn = self.ui.dashboard_btn
         self.dashboardViewBtn.hide()
         ################################################
@@ -258,19 +236,17 @@ class DxManager(QMainWindow):
 
         #팀원의 경우 프리퍼런스메뉴,스케쥴버튼,대시보드,팀트리뷰창을 숨김
         if self.job == "팀원" :
-            #self.teamTree.hide()
             self.preferenceMenu.menuAction().setVisible(False)
 
         ######################################################################
 
 
-        # Set up the artist label
-        #self.artistLabel.setText(userID)
+        # 아티스트 라벨 설정
         self.teamLabel.setText(self.team)
         self.artistLabel.setText(self.currName_kr)
         self.artistLabel_EN.setText(userID)
 
-        # Set up the SHOW listView 
+        # 프로젝트 리스트뷰 설정 
         self.projects = getProjectList()
         self.proj_model = QStandardItemModel()
 
@@ -280,7 +256,7 @@ class DxManager(QMainWindow):
         self.projSelection_model = self.projListview.selectionModel()
         self.projListview.setEditTriggers(QAbstractItemView.NoEditTriggers) # 리스트뷰내 아이템 편집되지 않게 함
 
-        # Set Model of Team treeView 
+        # 팀 트리뷰 모델 설정 
         self.teamTreeModel = QStandardItemModel()
         self.teamTreeModel.setColumnCount(1)
         self.teamTree.setModel(self.teamTreeModel)
@@ -288,22 +264,19 @@ class DxManager(QMainWindow):
 
         # 트리뷰의 멤버들을 선택하거나 포커싱되지 않도록 함
         self.teamTree.setSelectionMode(QAbstractItemView.SingleSelection)
-        #self.teamTree.setFocusPolicy(Qt.NoFocus)
 
 
-        #self.currName_kr, self.role, self.team = self.checkUserInfo() # 현재유저의 값 가져오기
         self.teamLeader = QStandardItem(self.currName_kr) 
         self.teamLeader.setCheckable(True)
-        #self.teamLeader.setCheckState(Qt.Checked) # 현재유저는 체크되어있는 상태로  ui가 시작되도록
 
         self.invisibleRootItem = self.teamTreeModel.invisibleRootItem()
         self.invisibleRootItem.appendRow(self.teamLeader)
 
 
-        # Set header name of treeView model
+        # 트리뷰 모델의 헤더 이름 설정
         self.teamTreeModel.setHorizontalHeaderLabels([self.team])
 
-        # Set up the Date combo box
+        # 날짜 콤보박스 설정
         self.comboDay = self.dayUi.comboBox_day
         self.comboMonth = self.dayUi.comboBox_month
         self.comboYear = self.dayUi.comboBox_year
@@ -330,29 +303,20 @@ class DxManager(QMainWindow):
         self.comboBoxDate.append(self.comboMonth.currentText())
         self.comboBoxDate.append(self.comboDay.currentText())
 
-        #setUp listView UI
+        # 리스트뷰 UI 설정
         self.listViewNumLineEdit.setText(str(self.listViewSlider.value()))
 
         # 이전에 저장된 스케쥴의 제이슨파일을 읽어와서  전역변수 jsonData 에 저장
         # 팀원 제이슨 정보를 읽어와서 ui에 반영시킬수 있도록 함
         self.getJsonData() 
 
-        #db = client['SCHEDULE_test']
-
-        """
-        for data in jsonData:
-            artist_name = data['artist']
-            collection_name = artist_name
-            collection = db[collection_name]
-            collection.insert_one(data)
-        """
-
-        #collection = db['test']
-        #collection.insert_one({'a':1})
-        #client.drop_database('SCHEDULE_DATA')
+        # KEEP: MongoDB 관련 코드는 database_manager.py로 이동됨
+        # from database_manager import DatabaseManager
+        # self.db_manager = DatabaseManager()
+        # self.db_manager.connect()
 
 
-        #Connect controller properties
+        # 컨트롤러 속성 연결
         self.menu_Edit.triggered.connect(self.showMemberEditDialog)
 
         self.forwardDayBtn.clicked.connect(self.forwardDay)
@@ -395,8 +359,6 @@ class DxManager(QMainWindow):
         self.taskInfomationDialog = None # 다이얼로그 객체 초기화
         self.editMandays = None # 맨데이 편집창 객체 초기화
 
-        #self.shotListview.doubleClicked.connect(lambda index: self.openTaskInfoWin(self.shotListview, index))
-
         self.shotListview.doubleClicked.connect(lambda index: self.openMedia(self.shotListview, index))
 
         artist = self.artistLabel.text()
@@ -410,7 +372,6 @@ class DxManager(QMainWindow):
 
 
         self.listViewSlider.valueChanged.connect(self.setListviewLineEdit)
-        #self.sliderTimer.timeout.connect(self.process_listviewSlider_value)
 
         self.listViewSlider.sliderReleased.connect(self.changeListViewUI_notTracking)
 
@@ -423,13 +384,8 @@ class DxManager(QMainWindow):
 
         # 샷 리스트뷰에 컨텍스트 메뉴 연결
         self.shotListview.setContextMenuPolicy(Qt.CustomContextMenu)
-        #self.shotListview.customContextMenuRequested.connect(self.show_context_menu)
         self.shotListview.customContextMenuRequested.connect(
             lambda pos, lv=self.shotListview: self.show_context_menu(lv, pos))
-
-
-        #lambda pos, lv=newListview.listView_day: self.show_context_menu(lv, pos))
-
 
         # 팀 트리뷰에 컨텍스트 메뉴 연결
         self.teamTree.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -472,8 +428,8 @@ class DxManager(QMainWindow):
             QApplication.sendEvent(self, event) 
 
 
-        # MythodType 메서드로 teamTree_mousePress메서드를 self.teamTree 객체의 메서드로 동적 할당.
-        # QTreeView의 기본 mousePressEvent를 교체해 MouseButtonPress 처리 강제
+        # MethodType 메서드로 teamTree_mousePress 메서드를 self.teamTree 객체의 메서드로 동적 할당
+        # QTreeView의 기본 mousePressEvent를 교체하여 MouseButtonPress 처리 강제
         self.teamTree.mousePressEvent = MethodType(teamTree_mousePress, self.teamTree)    
 
         # self.teamTree 이벤트필터 설치
@@ -484,23 +440,12 @@ class DxManager(QMainWindow):
 
 
 
-        #self.singleClick_select_member()
-
-        #self.teamTree.grabMouse()
-
-        #self.reloadShotList()
-
-        #def ignore_mouse_press(self, event):
-        #    event.ignore()
-
-        #self.teamTree.parent().mousePressEvent = MethodType(ignore_mouse_press, self.teamTree.parent())
-        ############################################################################################################################################
-        ############################################################################################################################################
-        ############################################################################################################################################
 
 
         #self.makeMirrorData()
 
+        # DEPRECATED: DB 마이그레이션 시 제거 예정 - 미러 데이터 스레드 셋업
+        # MongoDB에서는 트랜잭션과 관계형 구조로 대체됨
         # 스케쥴 미러데이터를 만들기 위한 쓰레드 셋업 - 팀장의 미러데이타가 저장됳때 팀원의 미러데이타도 함께 업데이트 되게 하여야함
         #self.makeMirrorThread = WorkerThread_makeMirror(jsonData, self)
         #self.makeMirrorThread.finished.connect(self.makeMirrorFinished)
@@ -509,34 +454,6 @@ class DxManager(QMainWindow):
         #self.makeMirrorThread.start()
 
 
-        # 프로그램 실행될시 이번주 마감인 태스크 리스트를 다이얼로그 창으로 띄우기.
-        # 한주의 스케쥴이 같을때라도, 마감일 이후에 스케쥴 등록되면 검은색표시
-        # 스케쥴뷰 창 갯수변화시 딜레이타임 추가해서 데이타 에러나지 않도록
-        # 스케쥴 리스트뷰 소팅 에러 수정해야함
-        # 맨데이 정보 오류 -  1. 리테이크가 발생하여 이전분기에 작업했던 맨데이가 새로운 분기에 더해짐
-        #                    2. 어싸인이 변경된경우 
-        # 차후에 난이도와 스타트/엔드데이트 컬럼 추가한후 show all task 옵션 진행
-        # 팀장이 팀원을 가지고 있다가 팀원이 다른 부서로 이동했을시, 스케쥴 정보에 문제가 생길수 있는지 확인필요
-        # edited_mandayData.json 의 데이타중 벨로즈 맨데이 수정되면 삭제되도록 해야함
-        # 2분기가 되면 workload 데이타 정상적으로 생성되는지 확인필요
-        # 현재 스타트,엔드데이트 외의 스케쥴은 삭제필요 (섹제해도 되는지 확인필요)
-        # find task 찾을때 start,end 에 포함되지 않는 날짜는 찾지 않도록
-        # 비디 데이타 계속 쌓이면 너무 많아지므로 비디데이타 수정된이후 지워지도록 해야함
-        # 미러데이타 쓰레드를 전체 프로그램 종료시 작동되도록 
-        # 컨텍스트 메뉴로 필요없는 태스크 예외시키기
-        # 보일필요 없는 태스크 하이드 시키기
-        # treeView 클래스로 변환하여 클릭과 더블클릭에 대한 작동 다시 구현해야함.
-        # 주단위 스케쥴 리스트뷰 제작
-        # 팀원의 경우 맨데이 수정 메뉴 뜨지 않도록 수정하거나 권한을 열어주는 기능 추가해야함
-        # 엑셀파일로 익스포트 
-        # move_sideway 와 refereshListview 메서드 두개가 서로 중복되게 작동함 
-        # 스케쥴 데이타를 저장할시 팀장이나 실장의 경우 본인의 스케쥴이 아님에도 본인 스케쥴 데이타 파일에 팀원의 스케쥴이 모두 저장되는 현상 해결해야함
-        # jsonData 가 메모리를 너무 많이 차지하지 않도록, 지난 프로젝트의 스케쥴 데이타는 따로 프로젝트별로 저장되게 인덱싱을 통해 읽어들이도록 수정해야함
-        # 맨데이 및 분기별 작업분량 확인할수 있도록 테이블위젯 만들기
-        # 소팅작업에 사용된 로직 확인할것
-        # 덮어쓰기보다 같은데이타가 있으면 확인후 덮어쓰고 없는 데이타가 있다면 추가하는 식으로 작동해야함.
-        # 분기별 샷진행 갯수를 셀때 그 태스크의 스타트/엔드 데이트가 각 분기에 걸쳐서 있는 경우 어떻게 할지 정해야함
-        # 팀장/리더급이 하위 멤버들의 에디팅을 온/오프 시킬수 있도록 해야함
 
 
     ###############################################################################################################################################################
@@ -568,19 +485,12 @@ class DxManager(QMainWindow):
         elif item[4] == "M": part = "matchmove"
         elif item[4] == "R" : part = "creature"
 
-
-        #part = item[4]
         proj_upp = item[0]
 
         proj_code = self.projects[proj_upp.lower()][0]
+     
 
-        #print (item[0])
-        #print (part)
-        #print (proj_code)
-        #print (task_name)
-        #print (context_name)
-
-        default_path = "/tactic/assets/"+proj_code
+        default_path = config.get_tactic_asset_path(proj_code)
 
         asset_worksPath = default_path +"/asset/"+task_name+"/"+part
 
@@ -636,8 +546,6 @@ class DxManager(QMainWindow):
 
     def get_latest_file(self, path):
 
-        #mov_files = glob.glob(os.path.join(path,"*.*"))
-
         patterns = ["thumb", "_icon_", "_web_"]
 
         all_items = [os.path.join(path, item) for item in os.listdir(path) if not any(pattern in item for pattern in patterns)]#"thumb" not in item]
@@ -675,7 +583,7 @@ class DxManager(QMainWindow):
 
 
 
-    # shotlistView 및 schedule listview 의 정보를 택틱의 최신정보로 업데이트
+    # ShotListView 및 Schedule ListView의 정보를 Tactic의 최신 정보로 업데이트
     def referesh_manager(self):
         
         self.reload_tatic = 1
@@ -687,7 +595,7 @@ class DxManager(QMainWindow):
 
 
 
-    # ui가 렌더링된 이후에 스크롤바 조정이 가능하기 때문에, 렌더링후 스크롤바 조정하는 메서드
+    # UI가 렌더링된 이후에 스크롤바 조정이 가능하기 때문에, 렌더링 후 스크롤바 조정하는 메서드
     def moveScrollBar(self):
 
         numberListView = int(self.listViewNumLineEdit.text())
@@ -713,7 +621,7 @@ class DxManager(QMainWindow):
 
 
 
-    # updateJson 이나 refereshListViews 와 같이 reloadShotListView 메서드를 통해 shotListview를 리프레시하는경우 이전에 적용된 정렬을 그대로 다시 적용
+    # updateJson이나 refreshListViews와 같이 reloadShotListView 메서드를 통해 shotListView를 리프레시하는 경우 이전에 적용된 정렬을 그대로 다시 적용
     def sortShotlistview(self):
 
         model = self.shotListview.model()    
@@ -731,7 +639,7 @@ class DxManager(QMainWindow):
             self.setItemColor_taskList()
 
 
-    # shotListview의 task명의 정렬
+    # shotListView의 태스크명 정렬
     def sort_by_taskName(self):
 
         self.sort_column = 1
@@ -740,7 +648,7 @@ class DxManager(QMainWindow):
         self.set_listView_view(self.shotListview, self.shotListview.model())
 
 
-    # shotListview의 status명의 정렬
+    # shotListView의 상태명 정렬
     def sort_by_status(self):
 
         self.sort_column = 3
@@ -749,7 +657,7 @@ class DxManager(QMainWindow):
         self.set_listView_view(self.shotListview, self.shotListview.model())
 
 
-    # shotListview의 part명의 정렬
+    # shotListView의 파트명 정렬
     def sort_by_part(self):
 
         self.sort_column = 4
@@ -758,7 +666,7 @@ class DxManager(QMainWindow):
         self.set_listView_view(self.shotListview, self.shotListview.model())
 
 
-    # shotListview의 part명의 정렬
+    # shotListView의 파트명 정렬
     def sort_by_proj(self):
 
         self.sort_column = 0
@@ -769,7 +677,7 @@ class DxManager(QMainWindow):
 
 
 
-    # 스케쥴 리스트뷰의 task명의 정렬
+    # 스케쥴 리스트뷰의 태스크명 정렬
     def sort_sch_listView_task(self, sche_class, sche_listview, label_day):
 
         model = sche_listview.model()
@@ -780,14 +688,13 @@ class DxManager(QMainWindow):
 
         dateDic = {"year":year, "month":month, "day":day}
 
-        #sortColumn = sche_listview.sort_column
         sche_class.sort_order = Qt.DescendingOrder if sche_class.sort_order == Qt.AscendingOrder else Qt.AscendingOrder
         self.sortScheduleListview(sche_listview, model, sche_class.sort_order, 1, dateDic)#sche_listview.sort_column, )
 
 
 
 
-    # 스케쥴 리스트뷰의 status명의 정렬
+    # 스케쥴 리스트뷰의 상태명 정렬
     def sort_sch_listView_status(self, sche_class, sche_listview, label_day):
 
         model = sche_listview.model()
@@ -816,7 +723,7 @@ class DxManager(QMainWindow):
 
         sche_class.sort_order = Qt.DescendingOrder if sche_class.sort_order == Qt.AscendingOrder else Qt.AscendingOrder
 
-        self.sortScheduleListview(sche_listview, model, sche_class.sort_order, 4, dateDic)#sche_listview.sort_column, )
+        self.sortScheduleListview(sche_listview, model, sche_class.sort_order, 4, dateDic)
 
         
 
@@ -833,7 +740,7 @@ class DxManager(QMainWindow):
 
         sche_class.sort_order = Qt.DescendingOrder if sche_class.sort_order == Qt.AscendingOrder else Qt.AscendingOrder
 
-        self.sortScheduleListview(sche_listview, model, sche_class.sort_order, 0, dateDic)#sche_listview.sort_column, )
+        self.sortScheduleListview(sche_listview, model, sche_class.sort_order, 0, dateDic)
 
 
 
@@ -880,40 +787,13 @@ class DxManager(QMainWindow):
 
 
 
-        ######## 각 인원의 미러파일 확인후 삭제  ######################################################################################################
-        """
-        saved_mirrData = self.import_Json(currentPath+"/.scheduleData_mirror", userID+"_scheduleMirror.json")
-        
-        seq_dic = {"pre":[], "py":[], "lwr":[], "tam":[], "smt":[], "sms":[], "red":[], "prd":[], "off" :[], "ktr":[], "hyk" :[],"gp" : ["E01", "E02","E03","E04", "E05","E06","E07","E08"], "hole":[], "gr":["SBG"], "kns":["MUL", "DAE"], "nor":["NOR"], "sd":["FZY", "SFS", "XFC"], "testshot": ["TRN", "RND"], "twf":["TWF", "SLM"]}
-
-        new_mirrDic = saved_mirrData
-
-        for proj in list(saved_mirrData.keys()):
-
-            del_tasks = []
-            for task in saved_mirrData[proj]:
-                check = self.check_projTask(seq_dic[proj], task[1], proj)
-
-                if check == False:
-                    del_tasks.append(task)
-
-            for delTask in del_tasks:
-                new_mirrDic[proj].remove(delTask)
-
-
-        self.export_Json(currentPath+"/.scheduleData_mirror", userID+"_scheduleMirror.json", new_mirrDic)
-        """
-        ######## 여기까지 삭제  ######################################################################################################
-
-
-
         #task_resultData, mirror_Dic = self.convert_to_resultData_forMirror(tasks, members)
         task_resultData, mirror_Dic = self.convert_to_resultData_forMirror(proj_tasks, members)
 
 
-        if os.path.exists(os.path.join(currentPath+"/.scheduleData_mirror", userID+"_scheduleMirror.json")):
+        if os.path.exists(config.get_schedule_mirror_file(userID)):
 
-            savedMirrorData = self.import_Json_Thread(currentPath+"/.scheduleData_mirror", userID+"_scheduleMirror.json")
+            savedMirrorData = self.import_Json_Thread(config.SCHEDULE_MIRROR_PATH, userID+"_scheduleMirror.json")
 
             del_sav_task = {} # 미러데이터를 만드는 경우 이미 미러데이터 제이슨 파일에 같은 이름의 데이타가 있으면 삭제 <-- 맨데이나 스테이터스등 수정된 최신데이타로 바꾸기 위해
             add_mir_task = {} # 삭제된 이전 미러 데이타를 대체하여 들어갈 최신 미러데이터 딕셔너리
@@ -944,49 +824,21 @@ class DxManager(QMainWindow):
                         if add_mir_task[proj][i] not in savedMirrorData[m_proj]:
                             savedMirrorData[proj].append(add_mir_task[proj][i])
 
-            """
-            for m_proj in mirror_Dic:
 
-                if m_proj not in savedMirrorData:
-                    savedMirrorData[m_proj] = mirror_Dic[m_proj]
-
-                elif m_proj in savedMirrorData:
-                    for m_task in mirror_Dic[m_proj]:
-                        if m_task not in savedMirrorData[m_proj]:
-                            savedMirrorData[m_proj].append(m_task)
-            """
-
-            self.export_Json_Thread(currentPath+"/.scheduleData_mirror", userID+"_scheduleMirror.json", savedMirrorData)
+            self.export_Json_Thread(config.SCHEDULE_MIRROR_PATH, userID+"_scheduleMirror.json", savedMirrorData)
 
             # 미러데이타 백업
             backup_dir = "mirrorData"
             backup_name = userID +"_scheduleMirror"
-            #elf.backup_schedule(savedMirrorData, userID, backup_dir, backup_name)
 
 
         else:
-            self.export_Json_Thread(currentPath+"/.scheduleData_mirror", userID+"_scheduleMirror.json", mirror_Dic)            
+            self.export_Json_Thread(config.SCHEDULE_MIRROR_PATH, userID+"_scheduleMirror.json", mirror_Dic)            
 
             # 미러데이타 백업
             backup_dir = "mirrorData"
             backup_name = userID +"_scheduleMirror"
             self.backup_schedule(mirror_Dic, userID, backup_dir, backup_name)
-
-
-
-
-
-
-
-        ##### 삭제하지 말것 #######
-        # 지난 프로젝트를 선택해서 리스트를 표시하는 기능을 사용하게 되면 쓰게될 부분 - 
-        # 순환문을 쓰지않고 if 검색문을 사용하기 위해 미러데이타의 키값을 가져와서 리스트를 만듦
-        #taskList = [{}]
-        #for saveData in savedMirrorData:
-        #    taskList[0][saveData[1]] = saveData[4]
-        #self.export_Json(currentPath+"/.scheduleData_mirror", userID+"_MirrorData_list.json", taskList)
-
-        #print (" - Mirror data creation is complete - ")
 
 
 
@@ -997,8 +849,6 @@ class DxManager(QMainWindow):
                 return True
 
         return False                
-
-
 
 
 
@@ -1013,8 +863,8 @@ class DxManager(QMainWindow):
         for member in members:
             name_kr, role, team, job, department = getUserInfo(member)
 
-            if os.path.exists(os.path.join(currentPath+"/.user_Info", member+"_userInfo.json")):
-                memberUserInfo = self.import_Json(currentPath+"/.user_Info", member+"_userInfo.json")
+            if os.path.exists(config.get_user_info_file(member)):
+                memberUserInfo = self.import_Json(config.USER_INFO_PATH, member+"_userInfo.json")
 
             if (memberUserInfo[0]["role"] != role) or (memberUserInfo[0]["team"] != team) or (memberUserInfo[0]["job"] != job) or (memberUserInfo[0]["department"] != department):
 
@@ -1023,7 +873,7 @@ class DxManager(QMainWindow):
                 memberUserInfo[0]["job"] = job
                 memberUserInfo[0]["department"] = department
 
-                self.export_Json(currentPath+"/.user_Info", member+"_userInfo.json", memberUserInfo)                
+                self.export_Json(config.USER_INFO_PATH, member+"_userInfo.json", memberUserInfo)                
 
         print (" - User information updated successfully - ")
 
@@ -1053,15 +903,9 @@ class DxManager(QMainWindow):
                     return grade
 
 
-        #return max(lv_set)
-
 
 
     def get_taskScore(self,project, process, task, context, artist):
-
-        # 액티브 상태인 프로젝트의 샷 체크데이타 경로
-        #if part == "ANI":
-        #checkData_path = "/show/" + project + "works/" + part  
 
         rig_taskContexts = ["asset", "shot"]
         ani_taskContexts = ["aniClip", "cache", "shot"]
@@ -1087,7 +931,7 @@ class DxManager(QMainWindow):
 
 
         # rig실의 asset/shot 폴더를 검색하여 해당 태스크 찾기 ########
-        processPath = "/show/" + project + "/works/" + part
+        processPath = config.get_show_process_path(project, part)
 
         checkList_path = ""
         for taskContext in contextFolders:
@@ -1100,7 +944,6 @@ class DxManager(QMainWindow):
                             if folder == task:
                                 checkList_path = processPath + "/" + taskContext + "/" + dir + "/" + task + "/" + context + "/.data/checkList" 
 
-        ###############################################################
 
 
 
@@ -1157,8 +1000,6 @@ class DxManager(QMainWindow):
         listview_num = self.listViewNumLineEdit.text()
         addDay = int(int(listview_num)/2)
 
-        #label_year = QDate(int(currentYear), int(currentMonth), int(currentDay)).addDays(dayNumber_add).year()
-
         endDate = QDate(int(year), int(month), int(day)).addDays(addDay)
         
         endDate_year = QDate(endDate).year()
@@ -1174,7 +1015,7 @@ class DxManager(QMainWindow):
 
         mm = self.listViewScroll.horizontalScrollBar().maximum()
 
-        self.listViewScroll.horizontalScrollBar().setValue(mm/2)#self.listViewScroll.horizontalScrollBar().maximum())
+        self.listViewScroll.horizontalScrollBar().setValue(mm/2)
 
 
 
@@ -1216,28 +1057,6 @@ class DxManager(QMainWindow):
 
 
 
-    """
-    def sel_assigned_project(self, teamMember):
-
-        #self.projListview.clearSelection()
-
-        i=0 # 프로그레스바 진행률
-
-        num_Mem = len(teamMember)
-        for memEN in teamMember:
-
-            memKR = self.memberCache_[memEN]
-
-            selItem = self.find_item_by_text(memKR)
-            selItem.setCheckState(Qt.Checked)
-           
-            # 프로그래스바 진행률 표시
-            i = i+1
-            progress = int((i+1) / num_Mem * 100)
-            if self.loadProj_progress:
-                self.loadProj_progress(progress)
-    """
-
     # 프로젝트 리스트 뷰 의 선택이 변경되면 샷리스트뷰를 새로고침
     def process_sel_project(self):
 
@@ -1250,22 +1069,18 @@ class DxManager(QMainWindow):
 
 
 
-
     # 팀 트리 뷰 우클릭 메뉴
     def member_context_menu(self, position):
-
 
         index = self.teamTree.indexAt(position)
 
         if index.isValid():
 
             item = index.data()
-
             memberEN = [member for member in self.memberCache_ if self.memberCache_[member] == item][0]
 
             teamMember = []
             self.get_tree_member(memberEN, teamMember)
-
 
             memberEN = [member for member in self.memberCache_ if self.memberCache_[member] == item][0]
             member_info = self.import_Json(currentPath + "/.user_Info", memberEN+"_userInfo.json")
@@ -1284,7 +1099,6 @@ class DxManager(QMainWindow):
 
                     if action == selectAll:
 
-                        #self.taskInfoJson = {}
                         i=0 # 프로그레스바 진행률
                         self.select_ctxMenu = 1  # 프로젝트 리스트뷰에서 프로젝트가 선택되더라도 select_ctxMenu 가 1로 되어있으면 reloadShotList가 실행되지 않도록 함
                         num_Mem = len(teamMember)
@@ -1296,12 +1110,8 @@ class DxManager(QMainWindow):
 
                         if self.ui.sel_allProj_checkBox.checkState() == Qt.Checked:
                             self.reloadShotList() 
-                            #self.refereshListViews(0, jsonData)
-                            #self.sel_assigned_proj() # 3주내 스케쥴 등록이 된 프로젝트들 모두 선택
-                            #self.reloadShotList_temp()
 
                         else:
-                            #self.reSelect_proj()
                             self.reloadShotList()
 
                         self.select_ctxMenu = 0 # 다시 0으로 원위치 시켜서 프로젝트 리스트뷰의 선택이 변경되면 reloadShotList가 실행되도록함
@@ -1317,7 +1127,6 @@ class DxManager(QMainWindow):
                             selItem.setCheckState(Qt.Unchecked)
 
                         if self.ui.sel_allProj_checkBox.checkState() == Qt.Checked:
-                            #self.sel_assigned_proj("multi", None, None, teamMember, 1)
                             self.reloadShotList()
                             self.updateJson(0)
 
@@ -1326,8 +1135,6 @@ class DxManager(QMainWindow):
                             self.reloadShotList()                       
 
                         self.select_ctxMenu = 0   # 다시 0으로 원위치 시켜서 프로젝트 리스트뷰의 선택이 변경되면 reloadShotList가 실행되도록함
-
-        #print (self.currentProjs)
 
         QApplication.restoreOverrideCursor()
 
@@ -1342,8 +1149,6 @@ class DxManager(QMainWindow):
 
         index = listview.indexAt(position)
 
-        #index = self.shotListview.indexAt(position)
-        
         if index.isValid():
 
             context_menu = QMenu(self)
@@ -1354,46 +1159,35 @@ class DxManager(QMainWindow):
             find_action = context_menu.addAction("Find Schedule")
             edit_mandays = context_menu.addAction("Edit Man-days")
 
-
-            #action = context_menu.exec_(self.shotListview.mapToGlobal(position))
             action = context_menu.exec_(listview.mapToGlobal(position))
 
             if action == task_info:
                 # 태스크 정보 표시하기
                 self.openTaskInfoWin(listview, index)
 
+
             if action == add_action:
                 selected_indexes = listview.selectedIndexes()
-
                 # 현재 샷 리스트에서 선택한 태스크들을 스케쥴에 맞게 리스트뷰에 배치시킴
                 self.add_schedule(selected_indexes)                
 
 
             elif action == find_action:
-
                 selected_indexes = listview.selectedIndexes()
-
                 self.find_schedule(selected_indexes)
 
 
             elif action == del_action:
                 selectedTasks = []
                 selected_indexes = listview.selectedIndexes()
-
                 self.delete_schedule(selected_indexes, listview)
 
 
-
             elif action == edit_mandays:
-
                 QApplication.setOverrideCursor(Qt.WaitCursor)
-
                 selectedTasks = []                
-                #selected_indexes = self.shotListview.selectedIndexes()
                 selected_indexes = listview.selectedIndexes()
-
                 self.edit_mandays(selected_indexes, listview)
-
                 QApplication.restoreOverrideCursor()
 
 
@@ -1403,7 +1197,6 @@ class DxManager(QMainWindow):
 
         selectedItems = []
         for index in selected_indexes:
-            #item = self.shotListview.model().data(index, Qt.DisplayRole)
             item = currListview.model().data(index, Qt.DisplayRole)            
             selectedItems.append(item)
 
@@ -1489,9 +1282,6 @@ class DxManager(QMainWindow):
             if col !=4 and col !=6:
                 self.editMandays.ui.table_editMandays.setItemDelegateForColumn(col, self.delegate)
 
-        #self.editMandays.ui.table_editMandays.resizeColumnsToContents()
-        #self.editMandays.ui.table_editMandays.resizeRowsToContents()
-
         self.editMandays.ui.Button_save.clicked.connect(lambda: self.save_bidManday(selectedItems))
         self.editMandays.ui.Button_export.clicked.connect(self.export_excel)
 
@@ -1573,11 +1363,6 @@ class DxManager(QMainWindow):
 
 
 
-
-
-
-
-
     # edittd_mandayData.json파이을 확인하여 현재 수정한 태스크의 bd맨데이가 택틱의 bd맨데이와 다르면, 수정된 
     # 맨데이를 edited_mandayData.json 에 저장
     # 저장하는 과정에서 active가 아닌 프로젝트의 데이타들은 모두 삭제
@@ -1605,9 +1390,9 @@ class DxManager(QMainWindow):
                     if bd_manday != task[2].split("/")[1]:
                         saveItem.append(editMandayData)
 
-        edited_mandayData_path = os.path.join(currentPath+"/.temp_BDmanday", "edited_mandayData.json")
+        edited_mandayData_path = os.path.join(config.CURRENT_PATH, ".temp_BDmanday", "edited_mandayData.json")
 
-        edited_Mandays_json = self.import_Json(currentPath+"/.temp_BDmanday", "edited_mandayData.json")
+        edited_Mandays_json = self.import_Json(os.path.join(config.CURRENT_PATH, ".temp_BDmanday"), "edited_mandayData.json")
 
 
         projectList_model = self.projListview.model()
@@ -1629,7 +1414,7 @@ class DxManager(QMainWindow):
 
         add_tasks = []
         if edited_Mandays_json == []:
-            self.export_Json(currentPath+"/.temp_BDmanday", "edited_mandayData.json", saveItem)
+            self.export_Json(os.path.join(config.CURRENT_PATH, ".temp_BDmanday"), "edited_mandayData.json", saveItem)
 
         elif edited_Mandays_json != []:
             for item in saveItem:                
@@ -1730,18 +1515,12 @@ class DxManager(QMainWindow):
 
 
 
-
-
-
-
     # 전체스케쥴중 현재 선택한 태스크 찾기 ---> 현재 샷 리스트에서 선택한 태스크가 존재하는 리스트뷰를 찾아서 해당 태스크를 하이라이트함
     def find_schedule(self, indexs):
 
         item = indexs[0].data()
         unscheduled_shots = [] # start/end date가 없는 샷들
         scheduleRange = []
-
-        #taskInfoJson = self.import_Json(currentPath+"/.task_info", userID+"_task_info.json") # 현재 로드되어있는 태스크 정보 가져오기        
 
         checkedMem, uncheckedMem = self.get_teamTree_member() # 현재 선택된 멤버 리스트 가져오기
 
@@ -1841,8 +1620,6 @@ class DxManager(QMainWindow):
     def selectItems(self, indexes):
         num_listview = self.dayUi.splitter.count()
 
-        #print (indexes)
-
         for i in range(num_listview):
             #listview_layout = self.day_listViewLayout.layout().itemAt(i)
             widget = self.dayUi.splitter.widget(i)
@@ -1857,39 +1634,13 @@ class DxManager(QMainWindow):
 
                 # 현재 찾으려는 태스크와 동일한 태스크가 리스트뷰에 존재하면 하이라이트 시킴
 
-                #if item in tasks:
-
-                ############################################################################333
-                ########## 추가한 스케쥴의 각 리스트뷰의 해당 태스크들이 선택안되는 현상
-                ############################################################################333
-
                 model = listview.model()
                 selection_model = listview.selectionModel()
                 for row in range(model.rowCount(QModelIndex())):
                     index = model.index(row, 0)
                     taskName = model.data(index, Qt.DisplayRole)
-                    #print (taskName)
                     if taskName in indexes:
                         selection_model.select(index, QItemSelectionModel.Select)
-                        #listview.selectionModel().select(index, QItemSelectionModel.Select)
-                        #listview.setCurrentIndex(index)
-
-
-                #for item in tasks:
-
-
-                    """
-                    for row in range(model.rowCount(QModelIndex())):
-                        index = model.index(row, 0)
-                        taskName = model.data(index, Qt.DisplayRole)
-
-                        if item in indexes:                        
-                        #if taskName == item:
-                            print (index)
-
-                            listview.setCurrentIndex(index)
-                    """
-
 
 
 
@@ -1974,12 +1725,7 @@ class DxManager(QMainWindow):
 
                             else:
                                 unscheduled_shots.append(item[1])
-        #self.updateJson(0)
 
-        #nameIndexes = indexs[:]
-        #self.reloadShotList()
-
-        #print (nameIndexes)
 
 
         if unscheduled_shots != []:
@@ -1998,23 +1744,6 @@ class DxManager(QMainWindow):
             days_difference = (maxDate - minDate).days + 1
 
 
-
-            """
-            # 스케쥴 리스트뷰들이 홀수로만 생성되고, 가운데 리스트뷰를 기준으로 양쪽으로 하나씩 두개가 붙기때문에 
-            # 최소날짜와 최대날짜의 차이가 짝수이면 홀수로 바꾸어 주어야 함
-            remainder = days_difference % 2
-
-            if days_difference > 20:
-                days_difference = 20
-
-            if remainder == 1:
-                self.changeListViewUI_(days_difference+4)
-                schedule_EndDate = minDate + timedelta(days=days_difference+2)
-
-            else:      
-                self.changeListViewUI_(days_difference+2)
-                schedule_EndDate = minDate + timedelta(days=days_difference+1)
-            """
 
             # 스케쥴 리스트뷰들이 홀수로만 생성되고, 가운데 리스트뷰를 기준으로 양쪽으로 하나씩 두개가 붙기때문에 
             # 최소날짜와 최대날짜의 차이가 짝수이면 홀수로 바꾸어 주어야 함
@@ -2046,26 +1775,11 @@ class DxManager(QMainWindow):
             # ui의 날짜 콤보박스에 반영된 날짜대로 리스트뷰 이동시키기
             self.changeComboDate()
 
-
             addDatas = [index.data() for index in indexs if index] 
-            #print (addDatas)
+
 
             self.reloadShotList()
-
             self.selectItems(addDatas)
-
-
-
-
-
-
-            #print (indexs)
-
-
-            #for index in indexs:
-            #    print (index)
-            #    if index:
-            #        print (index.data())
 
 
 
@@ -2145,8 +1859,6 @@ class DxManager(QMainWindow):
                                     elif project not in data["tasks"][0]:
                                         data["tasks"][0][project] = [task]
 
-                                    #tasks = addTask["tasks"][0][project]
-
                         else:
 
                             jsonData.append(addTask)                        
@@ -2171,29 +1883,13 @@ class DxManager(QMainWindow):
         else:
             existMember_inJson = []            
 
-        #for mem in existMember_inJson:
-        #    if mem not in self.memberCache_:
-        #        self.memberCache_[mem] = teamInfoData[0][mem]["nameKr"]
-
-        #del_mem = []
-        #for mem in self.memberCache_:
-        #    if mem not in existMember_inJson:
-        #        del_mem.append(mem)
-        #        del self.memberCache_[mem]
-
-        #for mem in del_mem:
-        #    if mem != userID and mem in self.memberCache_:
-        #        del self.memberCache_[mem]
-
         invisibleRoot = self.teamTreeModel.invisibleRootItem()
         rootItem = invisibleRoot.child(0)
 
         checked_items_list = []
         unchecked_items_list = []
-        #hierarchy = {}
 
         self.get_treeAll_items(rootItem, checked_items_list, unchecked_items_list, existMember_inJson, teamTreeHierarchy, 0)
-        #all_treeMemberList = list(set(checked_items_list + unchecked_items_list))
 
         return checked_items_list, unchecked_items_list
 
@@ -2223,10 +1919,7 @@ class DxManager(QMainWindow):
     # 분기별 작업량 취합하여 가져오기
     def get_workload_JsonData(self, itemName):
 
-        #self.updateJson(0)
         global jsonData
-
-        #itemName = self.teamTreeModel.data(index, Qt.DisplayRole)
 
         currentDate = QDate.currentDate()
         currentYear = currentDate.year()
@@ -2299,6 +1992,36 @@ class DxManager(QMainWindow):
 
 
 
+    def get_selected_projects(self):
+        """프로젝트 리스트뷰에서 선택된 프로젝트 코드들을 반환"""
+        selected_indexes = self.projListview.selectedIndexes()
+        selectedItems = [index.data() for index in selected_indexes]
+
+        selectedProj = []
+        for item in selectedItems:
+            for proj in self.projects:
+                if self.projects[proj][1] == item:
+                    selectedProj.append(proj)
+
+        return selectedProj
+
+    def get_cached_task_info(self, members, taskInfoJson=None):
+        """멤버별 태스크 정보를 캐싱하여 반환"""
+        taskInfo = {}
+        
+        if taskInfoJson is None:
+            taskInfoJson = self.import_Json(currentPath+"/.task_info", userID+"_task_info.json")
+        
+        for member in members:
+            if member in list(taskInfoJson.keys()):
+                taskInfo[member] = taskInfoJson[member]
+            elif member not in list(taskInfoJson.keys()):
+                taskInfo[member] = self.getTaskInfo(member)
+                taskInfoJson[member] = taskInfo[member]
+                self.export_Json(currentPath+"/.task_info", userID+"_task_info.json", taskInfoJson)
+        
+        return taskInfo
+
     def hide_completed_project_ui(self, ui_object, background_color="#252525"):
         """완료된 프로젝트 UI를 숨기고 어두운 색상으로 설정"""
         ui_object.hide()
@@ -2370,10 +2093,6 @@ class DxManager(QMainWindow):
         for proj in active_projects:
             projManday, progressValue, mandayProgressBar_set, bidManday = self.get_status_projectManday(taskInfoJson, proj, itemNameEN[0] ) # 프로젝트별 맨데이 현황 가져오기
             shotStatus, shotProgressValue, progressBar_set, wipValue, wip_shots = self.get_status_projectShot(taskInfoJson, proj, itemNameEN[0]) # 프로젝트별 샷진행 현황 가져오기
-            #taskWorkload_json, mandayStatus_json  = self.get_shotWorkload_byPeriod (taskInfoJson, itemNameEN[0], periodWorkload)
-
-
-
 
             # 현재 선택한 아티스트의 현재분기 작업량의 전체태스크가 아닌 jsonData(스케쥴UI에 기록된)의 샷 진행현황만 분기별로 정리해서 가져옴
             appTasks = "0"
@@ -2427,7 +2146,6 @@ class DxManager(QMainWindow):
                 projMandayUI.ui.label_project.setText(self.projects[proj][1])
                 projMandayUI.ui.label_progressBar_md.setValue(progressValue)
                 projMandayUI.ui.label_amount_md.setText(projManday)
-                #projMandayUI.ui.frame_mandayStatus.setStyleSheet("QFrame { background-color : #373737;}")
 
                 # 커스텀 멀티색깔 프로그래스바를 사용하기 위해 기존 UI로 만들었던 프로그래스바를 삭제
                 del_label_progressBar_shots = projMandayUI.ui.label_progressBar_shots
@@ -2461,10 +2179,7 @@ class DxManager(QMainWindow):
                     self.hide_completed_project_ui(projMandayUI, "#252525")                                        
 
 
-
-        #self.shotListview.doubleClicked.connect(lambda index: self.openTaskInfoWin(self.shotListview, index))
         self.memberStatusDialog.ui.button_teamWorkload.clicked.connect(lambda: self.show_team_status(index)) 
-        #self.memberStatusDialog.ui.button_teamWorkload.clicked.connect(lambda: self.dataLoadingProgress(index)) 
         self.verticalSpacer = QSpacerItem(20,40,QSizePolicy.Minimum, QSizePolicy.Expanding)
         self.memberStatusDialog.ui.v_Layout_allManday.addItem(self.verticalSpacer)
         self.memberStatusDialog.ui.label_name.setText(itemName)
@@ -2485,9 +2200,6 @@ class DxManager(QMainWindow):
 
 
 
-
-
-
     # 프로젝트별 현황UI 중 완료된 프로젝트의 비져빌리티 옵션        
     def visibilityProjStatusUI(self, state):
 
@@ -2501,8 +2213,6 @@ class DxManager(QMainWindow):
 
             elif  (state == 2):
                 proj_ui.show()
-
-
 
 
 
@@ -2636,20 +2346,15 @@ class DxManager(QMainWindow):
 
 
 
-
-
     # show_team_status메서드의 진행이 끝나면 창을 닫기위한 시그널 함수
     def progressBar_task_finished(self):
-
         self.loadingProgressDialog.close()
 
 
 
     # 하위 멤버들의 어싸인된 프로젝트를 로딩이 끝나면 창을 닫기위한 시그널 함수
     def loadingProj_progress_task_finished(self):
-
         self.projSelectionProgressDialog.close()
-
 
 
 
@@ -2691,7 +2396,7 @@ class DxManager(QMainWindow):
                 projTasksProgressSet = self.setup_shot_progressBar(appTasks, allTasks)
 
 
-                # UI setup
+                # UI 설정
                 projTeamMandayUI = proj_Manday.ProjManday()
 
                 self.teamStatusDialog.projUI_list.append(projTeamMandayUI)
@@ -2700,7 +2405,6 @@ class DxManager(QMainWindow):
                 projTeamMandayUI.ui.label_project.setText(self.projects[proj][1])
                 projTeamMandayUI.ui.label_progressBar_md.setValue(mandayProgressValue)
                 projTeamMandayUI.ui.label_amount_md.setText(projManday[proj])
-                #projTeamMandayUI.ui.frame_mandayStatus.setStyleSheet("QFrame { background-color : #373737;}")
 
                 #projTeamMandayUI.ui.label_progressBar_shots.setValue(tasksProgressValue)
                 # 커스텀 멀티색깔 프로그래스바를 사용하기 위해 기존 UI로 만들었던 프로그래스바를 삭제
@@ -2720,12 +2424,10 @@ class DxManager(QMainWindow):
 
 
                 # 각 색깔별 프로그래스바의 영역 설정
-                multi_label_progressBar_teamShots.addSegment(tasksProgressValue,'#484970') ##968ae1
-                multi_label_progressBar_teamShots.addSegment(tasksWipValue,'#5b8961') #c1cec1
-
+                multi_label_progressBar_teamShots.addSegment(tasksProgressValue,'#484970')
+                multi_label_progressBar_teamShots.addSegment(tasksWipValue,'#5b8961')
 
                 projTeamMandayUI.ui.label_amount_shots.setText(projShotStatus[proj])
-                #projTeamMandayUI.ui.label_progressBar_shots.setStyleSheet( projTasksProgressSet )
 
                 multi_label_progressBar_teamShots.setStyleSheet( projTasksProgressSet )
                 projTeamMandayUI.ui.label_progressBar_md.setStyleSheet( projMandayProgressSet )
@@ -2733,8 +2435,6 @@ class DxManager(QMainWindow):
 
                 if appTasks == allTasks:
                     self.hide_completed_project_ui(projTeamMandayUI, "#303030")                         
-
-
 
 
         all_app = result[0]
@@ -2767,8 +2467,6 @@ class DxManager(QMainWindow):
         else:
             Q_taskProgressValue = (float(all_app) / float(all_tasks))*100
 
-        #self.teamStatusDialog.ui.label_teamName.setText(team)
-        #self.teamStatusDialog.ui.label_teamLeader.setText(job)
         self.teamStatusDialog.ui.label_wip_allTeamTasks.setText(Q_app_all_tasks)
         self.teamStatusDialog.ui.label_used_allTeamMandays.setText(Q_act_bid_mandays)        
         self.teamStatusDialog.ui.label_allTasks.setText(str(all_app))        
@@ -2785,11 +2483,7 @@ class DxManager(QMainWindow):
         self.teamStatusDialog.ui.checkBox_visivilityCompletedProj.stateChanged.connect(self.visibilityTeamStatusUI)
         self.teamStatusDialog.ui.line.setStyleSheet("QFrame { background-color: #323232; height: 2px; border: none;}")
 
-
         self.teamStatusDialog.show()
-
-
-
 
 
 
@@ -2815,8 +2509,6 @@ class DxManager(QMainWindow):
 
         invisibleRoot = self.teamTreeModel.invisibleRootItem()
         rootItem = invisibleRoot.child(0)
-
-        #item  = self.teamTreeModel.data(index, Qt.ItemDataRole.DisplayRole)
 
         total_app_tasks = 0
         total_tasks = 0
@@ -2854,12 +2546,10 @@ class DxManager(QMainWindow):
 
 
 
-
     # 프로젝트별 현황UI 중 완료된 프로젝트의 비져빌리티 옵션        
     def visibilityTeamStatusUI(self, state):
 
         for proj_ui in self.teamStatusDialog.projUI_list:
-            #mmm = proj_ui.ui.label_amount_md.text()
             app = int((proj_ui.ui.label_amount_shots.text()).split("/")[0])
             all = int((proj_ui.ui.label_amount_shots.text()).split("/")[1])
 
@@ -2868,22 +2558,6 @@ class DxManager(QMainWindow):
 
             elif  (state == 2):
                 proj_ui.show()
-
-
-    """
-    def getAllItem_treeView(self, item, allItems):
-
-        allItems.append(item.text())
-
-        for row in range(item.rowCount()):
-            child_item = item.child(row)
-            self.getAllItem_treeView(child_item, allItems)
-
-        return allItems
-    """
-
-
-
 
 
 
@@ -2939,7 +2613,7 @@ class DxManager(QMainWindow):
                         act_manday = taskData["active_manday"]
                         """
                         if project != "testshot": ## 관리개발은 전체 맨데이 산정에서 제외시키기
-                            if taskData["status"] != "Omit": # Omit 된샷은 샷갯수 산정에서 제외시키기
+                            if taskData["status"] != "Omit": # 오밋된 샷은 샷갯수 산정에서 제외시키기
                                 all_shot += 1
 
                             if taskData["status"] == "Approved": 
@@ -2983,18 +2657,10 @@ class DxManager(QMainWindow):
                             act_manday = float(act)
 
                     elif "/" not in str(mandays):
-                        bd_manday = 0#taskData["bid_manday"]
-                        act_manday = 0#taskData["active_manday"]
-
-            #if bd_manday == None:
-            #    bd_manday = 0
-            #if act_manday == None:
-            #    act_manday = 0
+                        bd_manday = 0
+                        act_manday = 0
 
             return status, bd_manday, act_manday                    
-
-
-
 
 
 
@@ -3037,12 +2703,8 @@ class DxManager(QMainWindow):
 
 
 
-
-
-
     # 분기별 진행한 태스크의 갯수와 완료현황, 맨데이 현황을 가져옴
     def get_shotWorkload_byPeriod(self, taskInfo, member, periodWorkload):
-
 
         global jsonData
 
@@ -3077,13 +2739,6 @@ class DxManager(QMainWindow):
                                                     if task not in workload_json[year][quarter][proj]:
                                                         workload_json[year][quarter][proj].append(task)
 
-
-                                                #workload_json[year][quarter][proj].append(task)
-                                                #if task not in tasks[proj]:
-                                                #    tasks[proj].append(task)
-
-                                            #workload_json[year][quarter][proj] = tasks
-
         shotWorkload_json, mandayStatus_json = self.get_shotWorkload_json(taskInfo, member, workload_json, department)
 
         return shotWorkload_json, mandayStatus_json
@@ -3109,7 +2764,7 @@ class DxManager(QMainWindow):
         for taskData in taskInfo[member]:
             if taskData["project_code"] == self.projects[project][0]:
                 if project != "testshot": ## 관리개발은 전체 맨데이 산정에서 제외시키기
-                    if taskData["status"] != "Omit": # Omit 된샷은 샷갯수 산정에서 제외시키기
+                    if taskData["status"] != "Omit": # 오밋된 샷은 샷갯수 산정에서 제외시키기
                         all_shot += 1
 
                     if taskData["status"] == "Approved": 
@@ -3176,7 +2831,7 @@ class DxManager(QMainWindow):
 
             if taskData["project_code"] == self.projects[project][0]:
                 if project != "testshot": ## 관리개발은 전체 맨데이 산정에서 제외시키기
-                    if taskData["status"] != "Omit": # Omit 된샷은 샷갯수 산정에서 제외시키기
+                    if taskData["status"] != "Omit": # 오밋된 샷은 샷갯수 산정에서 제외시키기
 
                         # 편집된 BD맨데이가 있는지 확인했을때 없는경우
                         if (tempTask_sr is not None and taskName not in tempTask_sr.values) or (tempTask_sr is None):
@@ -3272,7 +2927,6 @@ class DxManager(QMainWindow):
                     }
 
                 """)
-        #QColor(94,29,35)
         return progressBar_setup
 
 
@@ -3320,18 +2974,9 @@ class DxManager(QMainWindow):
         return progressBar_setup
 
 
-
-
-
-
-
-
-
-
     # 트리뷰에서 팀원을 선택하거나 해제할때 샷리스뷰와 리스트뷰의 내용들을 갱신
     def handle_item_state_change(self, index):
         self.clickedAction_memberCheck(index)
-
 
 
 
@@ -3382,69 +3027,19 @@ class DxManager(QMainWindow):
 
 
 
-    """
-    def process_listviewSlider_value(self):
-
-        text = self.last_value
-
-
-        scaleUI = 300/(int(self.listViewNumLineEdit.text())/3) 
-
-        #current_Listview_Num = self.day_listViewLayout.count()
-        current_Listview_Num = self.dayUi.splitter.count()
-        changed_ListView_Num = int(self.listViewNumLineEdit.text())
-
-        number_add = changed_ListView_Num - current_Listview_Num
-
-
-        if 300 < scaleUI < 800:
-            fontScale = 12#(scaleUI / 300)*20
-
-        elif scaleUI <= 300:
-            scaleUI = 300 # 리스트뷰의 최소크기
-            fontScale = 12
-            
-        elif scaleUI >= 800:
-            fontScale = 25
-
-
-        if number_add > 0:
-
-            #self.rescaleListView(scaleUI, fontScale)
-            self.addListView(number_add, current_Listview_Num, scaleUI)
-
-        elif number_add < 0:
-            #self.rescaleListView(scaleUI, fontScale)
-            self.removeListView(number_add, current_Listview_Num)         
-
-
-        self.listViewSlider.setValue(int(text))  
-
-        mm = self.listViewScroll.horizontalScrollBar().maximum()
-        self.listViewScroll.horizontalScrollBar().setValue(mm/2)#self.listViewScroll.horizontalScrollBar().maximum())
-    """
-
-
-
 
     @Slot()
     def changeListViewUI_notTracking(self):
 
-        #if not self.sliderTimer.isActive():
-        #    self.sliderTimer.start()
-
-        #self.last_value = self.listViewSlider.value
         scaleUI = 300/(int(self.listViewNumLineEdit.text())/3) 
 
-        #current_Listview_Num = self.day_listViewLayout.count()
         current_Listview_Num = self.dayUi.splitter.count()
 
         changed_ListView_Num = int(self.listViewNumLineEdit.text())
         number_add = changed_ListView_Num - current_Listview_Num
 
-
         if 300 < scaleUI < 800:
-            fontScale = 12#(scaleUI / 300)*20
+            fontScale = 12
 
         elif scaleUI <= 300:
             scaleUI = 300 # 리스트뷰의 최소크기
@@ -3455,23 +3050,13 @@ class DxManager(QMainWindow):
 
 
         if number_add > 0:
-            #self.rescaleListView(scaleUI, fontScale)
             self.addListView(number_add, current_Listview_Num, scaleUI)
 
         elif number_add < 0:
-            #self.rescaleListView(scaleUI, fontScale)
             self.removeListView(number_add, current_Listview_Num)         
 
-
-        #self.listViewSlider.setValue(int(self.last_value))  
-
         mm = self.listViewScroll.horizontalScrollBar().maximum()
-        self.listViewScroll.horizontalScrollBar().setValue(mm)#self.listViewScroll.horizontalScrollBar().maximum())
-
-
-
-
-
+        self.listViewScroll.horizontalScrollBar().setValue(mm)
 
 
 
@@ -3483,14 +3068,13 @@ class DxManager(QMainWindow):
 
         scaleUI = 300/(int(self.listViewNumLineEdit.text())/3) 
 
-        #current_Listview_Num = self.day_listViewLayout.count()
         current_Listview_Num = self.dayUi.splitter.count()
 
         changed_ListView_Num = int(self.listViewNumLineEdit.text())
         number_add = changed_ListView_Num - current_Listview_Num
 
         if 300 < scaleUI < 800:
-            fontScale = 12#(scaleUI / 300)*20
+            fontScale = 12
 
         elif scaleUI <= 300:
             scaleUI = 300 # 리스트뷰의 최소크기
@@ -3501,15 +3085,10 @@ class DxManager(QMainWindow):
 
 
         if number_add > 0:
-            #self.rescaleListView(scaleUI, fontScale)
             self.addListView(number_add, current_Listview_Num, scaleUI)
 
         elif number_add < 0:
-            #self.rescaleListView(scaleUI, fontScale)
             self.removeListView(number_add, current_Listview_Num)         
-
-
-        #self.listViewSlider.setValue(int(text))  
 
         max_scroll = self.listViewScroll.horizontalScrollBar().maximum()
         self.listViewScroll.horizontalScrollBar().setValue(max_scroll)#self.listViewScroll.horizontalScrollBar().maximum())
@@ -3517,28 +3096,6 @@ class DxManager(QMainWindow):
           
 
 
-
-
-
-    '''
-    def get_UI_scale(self, scaleUI):
-        if 80 < scaleUI < 800:
-            fontScale = (scaleUI / 300)*25
-
-        elif scaleUI <= 90:
-            scaleUI = 90
-            fontScale = 8
-            
-        elif scaleUI >= 500:
-            fontScale = 25       
-
-        return scaleUI, fontScale
-    '''
-
-
-
-
-    """
     def rescaleListView(self, scaleUI, fontScale):
 
         currentNumListView = self.day_listViewLayout.count()
@@ -3547,42 +3104,14 @@ class DxManager(QMainWindow):
             layout_listview = self.day_listViewLayout.itemAt(i)
 
             if layout_listview:
-                currentListview = layout_listview.layout().itemAt(2)
-               
-
-                if currentListview:
-                    listView_width = currentListview.widget().width()
-
-                    currentListview.widget().setMinimumSize(scaleUI, 0)
-                    font = QFont()
-                    font.setPointSize(fontScale)
-                    currentListview.widget().setFont(font)
-    """
-
-
-    def rescaleListView(self, scaleUI, fontScale):
-
-        currentNumListView = self.day_listViewLayout.count()
-
-        for i in range(currentNumListView):
-            layout_listview = self.day_listViewLayout.itemAt(i)
-
-            if layout_listview:
-                #currentListview = layout_listview.layout().itemAt(2)
                 widgetItem_frame = layout_listview.layout().itemAt(2)
                 
                 if widgetItem_frame:
                     frame = widgetItem_frame.widget()
 
                     if frame:
-
                         currentListview = frame.layout().itemAt(0).widget()
                         listView_width = currentListview.width()
-
-                        #frame_width = frame.widget().width()
-
-                        #frame.setMinimumSize(scaleUI, 0)
-                        #currentListview.setMinimumSize(scaleUI, 0)
 
                         font = QFont()
                         font.setPointSize(fontScale)
@@ -3591,24 +3120,18 @@ class DxManager(QMainWindow):
 
 
 
-
-
     def addListView(self, num, currentNum, scaleUI):
 
         global jsonData
-        #global rangeEndDate
-
-        #self.updateJson(0)
 
         half_val = int(num/2) # 추가되는 리스트뷰중 앞쪽 혹은 뒤쪽에 붙일 리스트뷰의 개수(전체추가되는 개수의 절반)
         half_existList = int(currentNum / 2) # 이미 존재하는 리스트뷰 개수기준으로 현자날짜기준 앞쪽 혹은 뒤쪽에 붙일 리스트뷰개수(전체개수의 절반)
 
         halfDay = QDate(self.rangeEndDate.year(), self.rangeEndDate.month(), self.rangeEndDate.day()).addDays(-1*half_existList)
         
-
-        currentDay = halfDay.day()#self.comboDay.currentText()
-        currentMonth = halfDay.month()#self.comboMonth.currentText()
-        currentYear = halfDay.year()#self.comboYear.currentText()
+        currentDay = halfDay.day()
+        currentMonth = halfDay.month()
+        currentYear = halfDay.year()
 
         num_all_listview = currentNum + num
         value_addDay = int((num_all_listview) / 2) 
@@ -3634,20 +3157,16 @@ class DxManager(QMainWindow):
 
             listview_labelName = str(label_month) + "/" + str(label_day) + " ( "+weekDay[label_dow]+" )"
 
-            #layout_parent = self.day_listViewLayout
             layout_parent = self.dayUi.splitter
             layout_child = listViewName + "_layout"
 
-
             newListview = lv.ScheduleListView(listview_labelName, listViewName, layout_parent, layout_child, scaleUI, self, self.manager, self.dayScheduleFrame, self)
-
 
             # 새로 생성한 리스트뷰에 드래그 드롭이 발생한경우, self.get_dropEvent 메서드를 실행시킴
             newListview.listView_day.itemsDropped.connect(self.get_dropEvent)
 
             # 리스트뷰내 아이템을 더블클릭하면 테스크 정보창이 생성
-            newListview.listView_day.doubleClicked.connect(lambda index: self.openMedia(self.current_focused_list_view, index))#new_listView, index))
-            #newListview.listView_day.doubleClicked.connect(lambda index: self.openTaskInfoWin(self.current_focused_list_view, index))#new_listView, index))
+            newListview.listView_day.doubleClicked.connect(lambda index: self.openMedia(self.current_focused_list_view, index))
 
             # 리스트뷰에 컨텍스트 메뉴 연결
             newListview.listView_day.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -3655,62 +3174,29 @@ class DxManager(QMainWindow):
                 lambda pos, lv=newListview.listView_day: self.show_context_menu(lv, pos))
 
 
-
-            #openMedia(self, listview, index)
-
             # label_dow 가 토요일이나 일요일일경우 색깔변경
             if label_dow == 6 or label_dow == 7:
                 newListview.listView_day.setStyleSheet("QListView { background-color: #232323; }")
             else:                
                 newListview.listView_day.setStyleSheet("QListView { background-color: #2a2a2a; }")            
 
-
-
-
-            """
-            new_listView, new_listviewLayout = self.makeListView(listview_labelName, listViewName, layout_parent, layout_child, scaleUI)
-
-
-            # 새로 생성한 리스트뷰에 드래그 드롭이 발생한경우, self.get_dropEvent 메서드를 실행시킴
-            new_listView.itemsDropped.connect(self.get_dropEvent)
-
-            # 리스트뷰내 아이템을 더블클릭하면 테스크 정보창이 생성
-            new_listView.doubleClicked.connect(lambda index: self.openTaskInfoWin(self.current_focused_list_view, index))#new_listView, index))
-
-            # label_dow 가 토요일이나 일요일일경우 색깔변경
-            if label_dow == 6 or label_dow == 7:
-                new_listView.setStyleSheet("QListView { background-color: lightgray; }")
-            else:                
-                new_listView.setStyleSheet("QListView { background-color: white; }")            
-            """
-
-
             # 스케쥴뷰의 리스트뷰의 갯수가 늘어날 경우 앞날짜의 리스트뷰와 뒷날짜의 리스트뷰가 늘어나게 되는데
             # 앞날짜의 리스트뷰와 뒷날짜의 리스트뷰가 모두 뒤로 붙지 않고 앞날짜는 앞에 뒷날짜는 뒤로 붙게 생성.
             if i < half_val:
                 for j in range(currentNum):
-                    #exist_layout = self.day_listViewLayout.takeAt(i)
                     widget = self.dayUi.splitter.widget(i)
                     exist_layout = widget.layout()
 
                     parentWidget = exist_layout.parentWidget()
 
-                    #self.day_listViewLayout.addLayout(exist_layout)    
                     self.dayUi.splitter.addWidget(parentWidget)
-
 
         newRangeEndDate = QDate(self.rangeEndDate.year(), self.rangeEndDate.month(), self.rangeEndDate.day()).addDays(half_val)
         newRangeStartDate = QDate(newRangeEndDate.year(), newRangeEndDate.month(), newRangeEndDate.day()).addDays(-1*(num+currentNum)+1)
        
         self.update_range_Label(newRangeStartDate, newRangeEndDate)
-
         self.rangeEndDate = newRangeEndDate
 
-        #print (newRangeStartDate)
-        #print (newRangeEndDate)
-
-
-        #listViewNum = self.day_listViewLayout.count()
         listViewNum = self.dayUi.splitter.count()
 
 
@@ -3736,49 +3222,18 @@ class DxManager(QMainWindow):
 
 
 
-    """
-    def _remove_layout(self, layout):
-
-        while layout.count():
-            item = layout.takeAt(0)
-
-            if isinstance(item, QWidgetItem):
-                widget = item.widget()
-                if widget:
-                    sub_layout = widget.layout() # 하위에 레이아웃이 있는지 확인
-                    if sub_layout:
-                        self._remove_layout(sub_layout) # 재귀적으로 하위 레이아웃 삭제
-
-
-                    widget.deleteLater()
-
-            elif isinstance(item, QHBoxLayout):
-                self._remove_layout(item)
-                
-        #print (layout)
-        layout.deleteLater()      
-        QApplication.processEvents()
-        #print (isinstance(layout, QVBoxLayout))
-    """
-
 
     def _remove_layout(self, remItem):
-
 
         if isinstance(remItem, QWidget):
             layout = remItem.layout()
             if layout:
                 self._remove_layout(layout)
 
-            #print ("#1")
-            #print (remItem)
             remItem.setParent(None) # 부모에서 제거
             remItem.deleteLater()
 
-
         elif isinstance(remItem, QHBoxLayout):
-            #while layout.count():
-            #    item = layout.takeAt(0)
             while remItem.count():
                 item = remItem.takeAt(0)
 
@@ -3790,68 +3245,31 @@ class DxManager(QMainWindow):
                         if sub_layout:
                             self._remove_layout(sub_layout) # 재귀적으로 하위 레이아웃 삭제
 
-                        #print ("#2")
-                        #print (widget)
                         widget.setParent(None) # 부모에서 제거
                         widget.deleteLater()
 
-            #print ("#3")
-            #print (remItem)
             remItem.setParent(None) # 부모에서 제거            
             remItem.deleteLater()
 
 
-    """
-    def _remove_layout(self, widget):
-
-        layout = widget.layout()
-
-        while layout.count():
-            item = layout.takeAt(0)
-
-            if isinstance(item, QWidgetItem):
-                widget = item.widget()
-
-                if widget:
-                    sub_layout = widget.layout() # 하위에 레이아웃이 있는지 확인
-                    if sub_layout:
-                        self._remove_layout(sub_layout) # 재귀적으로 하위 레이아웃 삭제
-
-                    widget.deleteLater()
-
-            elif isinstance(item, QHBoxLayout):
-                self._remove_layout(item)
-                
-
-        layout.deleteLater()
-    """
 
 
 
     def removeListView(self, removeNum, currentNum):
 
-
         global jsonData
-        #global rangeEndDate
 
         half_val = abs(int(removeNum/2)) # 추가되는 리스트뷰중 앞쪽 혹은 뒤쪽에 삭제할 리스트뷰의 개수(전체삭제되는 개수의 절반)
         half_existList = int(currentNum / 2) # 이미 존재하는 리스트뷰 개수기준으로 현재날짜기준 앞쪽 혹은 뒤쪽의 리스트뷰개수(전체개수의 절반)
 
         widgets_to_remove = []
         for i in range(abs(removeNum)):
-            #layout_to_remove = self.day_listViewLayout.takeAt((currentNum-1)-i)
             if  i < half_val:
-                #widget_to_remove = self.dayUi.splitter.widget(0)
                 widgets_to_remove.append(self.dayUi.splitter.widget(i))
 
             if i >= half_val:
                 numLayout = self.dayUi.splitter.count()  
-                #widget_to_remove = self.dayUi.splitter.widget(numLayout-1)                
                 widgets_to_remove.append(self.dayUi.splitter.widget((numLayout-1)-(i-half_val)))
-
-            #if widget_to_remove:
-            #    self._remove_layout(widget_to_remove)
-
 
         if widgets_to_remove:
 
@@ -3862,29 +3280,12 @@ class DxManager(QMainWindow):
             QApplication.processEvents() # 삭제 이벤트 처리
             widgets_to_remove.clear() # 참조 제거
 
-        #for widget in widgets_to_check:
-        #    print (isinstance(widget, QWidget))
-
-        #    print (widget.parent())
-        #    if isinstance(widget, QWidget):
-        #        print (widget)
-                
-
-
         newRangeEndDate = QDate(self.rangeEndDate.year(), self.rangeEndDate.month(), self.rangeEndDate.day()).addDays(-1*half_val)
         newRangeStartDate = QDate(newRangeEndDate.year(), newRangeEndDate.month(), newRangeEndDate.day()).addDays(-1*(removeNum+currentNum)+1)
        
         self.update_range_Label(newRangeStartDate, newRangeEndDate)
-
-
-        #print (newRangeStartDate)
-        #print (newRangeEndDate)
-
         self.rangeEndDate = newRangeEndDate
 
-
-        #self.updateJson(0) # 
-        #self.refereshListViews(0, jsonData)
         self.reset_splitter_size() # 스케쥴 리스트뷰의 스플리터 사이즈 리셋
 
 
@@ -3896,9 +3297,7 @@ class DxManager(QMainWindow):
 
         if(os.path.exists(tempBid_path)):
             tempBid_df = pd.read_json(tempBid_path)
-            tempTask_sr = tempBid_df[0]  # 
-            #temptask_part_sr = tempBid_df[2]
-
+            tempTask_sr = tempBid_df[0]
 
         else:
             tempBid_df = None
@@ -3915,44 +3314,29 @@ class DxManager(QMainWindow):
             context_name = None
 
         #트리뷰를 새로고침하고 전체 팀원정보를 읽어옴
-        teamInfo = teamInfo_#self.edit_teamTree_item(self.teamTreeModel.invisibleRootItem())
-
-
-        # 현재 샷 리스트상에 로드된 샷들의 태스크정보 읽어오기
-        #taskInfoJson = self.import_Json(currentPath+"/.task_info", userID+"_task_info.json")
+        teamInfo = teamInfo_
 
         artist_task = None
         artist_kr = ""
-        #project = ""
         projTitle = ""
         process = ""
 
         artistList = list(taskInfoJson.keys())
-
         project_code = self.projects[project][0]
 
         for artist in artistList:
-
             for task in  taskInfoJson[artist]:
-
                 if context_name == None:
-
                     if (task["extra_code"] == task_name) and project_code == task["project_code"] and task["context"] == task["process"]:
-
                         process = task["process"]
                         artist_task = artist
-                        #project = connect_shot_proj[item]
                     
                         if artist == userID:
                             artist_kr = self.currName_kr
-                    
                         else:
                             artist_kr = teamInfo[0][artist]["nameKr"]
 
-
-
                 else:
-                    
                     if (task["extra_code"] == task_name and task["context"] == task["process"]+"/"+context_name) and project_code == task["project_code"]:
                         artist_task = artist
                         #project = connect_shot_proj[item]
@@ -3960,7 +3344,6 @@ class DxManager(QMainWindow):
 
                         if artist == userID:
                             artist_kr = self.currName_kr
-                    
                         else:
                             artist_kr = teamInfo[0][artist]["nameKr"]                    
 
@@ -4001,17 +3384,10 @@ class DxManager(QMainWindow):
                 bid = 0.0
                 act = 0.0
 
-                #print (taskData["extra_code"])
-                #print (taskData["context"])
-                #print (task)
-                #print (context)
-                #print ("##")
                 if (taskData["extra_code"] == task and taskData["context"] == context) and project_code == taskData["project_code"]:
-
                     indices = tempBid_df[(tempBid_df[0] == item[1]) & (tempBid_df[2] == item[4])].index.tolist() # 해당 태스크의 인덱스 가져오기
 
                     if indices == []:
-                    #if (tempTask_sr is not None and taskName not in tempTask_sr.values) or (tempTask_sr is None):
                         if taskData["start_date"] != None:
                             start = taskData["start_date"].split(" ")[0]
                         else: start = None                        
@@ -4022,12 +3398,9 @@ class DxManager(QMainWindow):
 
                         bid = taskData["bid_manday"]
                         act = taskData["active_manday"]
-
                         shotManday = str(act) + " / " + str(bid)
 
-
                     elif indices != []:
-                    #elif taskName in tempTask_sr.values:
                         if taskData["start_date"] != None:
                             start = taskData["start_date"].split(" ")[0]
                         else: start = None                        
@@ -4044,10 +3417,7 @@ class DxManager(QMainWindow):
                         shotManday = newMandays
 
 
-
-
                     status = taskData["status"]
-
                     shot_act = shotManday.split("/")[0]
                     shot_bid = shotManday.split("/")[1]
 
@@ -4071,21 +3441,6 @@ class DxManager(QMainWindow):
                 if taskData["project_code"] == self.projects[project.lower()][0]:
 
                     taskContext = ""
-
-                    """
-                    if taskData["context"] != "animation":
-                        context = taskData["context"].split("/")[1]
-                        taskContext = taskData["extra_code"] + "/" + context
-
-                    elif taskData["context"] == "animation":
-                        taskContext = taskData["extra_code"]
-
-                    if taskData["process"] == "animation": part = "A"
-                    elif taskData["process"] == "creature": part = "G"
-                    elif taskData["process"] == "matchmove": part = "M"
-                    """
-
-
 
                     if taskData["process"] == "animation":
                         if "/" in taskData["context"]:
@@ -4151,11 +3506,6 @@ class DxManager(QMainWindow):
 
 
 
-
-
-
-
-
     def get_TaskInfo(self, item, taskInfoJson):
 
         if "/" in item[1]:
@@ -4167,11 +3517,7 @@ class DxManager(QMainWindow):
             context_name = None
 
         #트리뷰를 새로고침하고 전체 팀원정보를 읽어옴
-        teamInfo = teamInfo_#self.edit_teamTree_item(self.teamTreeModel.invisibleRootItem())
-
-
-        # 현재 샷 리스트상에 로드된 샷들의 태스크정보 읽어오기
-        #taskInfoJson = self.import_Json(currentPath+"/.task_info", userID+"_task_info.json")
+        teamInfo = teamInfo_
 
         artist_task = None
         artist_kr = ""
@@ -4185,23 +3531,17 @@ class DxManager(QMainWindow):
             for task in  taskInfoJson[artist]:
 
                 if context_name == None:
-
                     if task["extra_code"] == task_name:
-
                         process = task["process"]
                         artist_task = artist
                         project = connect_shot_proj[item]
                     
                         if artist == userID:
                             artist_kr = self.currName_kr
-                    
                         else:
                             artist_kr = teamInfo[0][artist]["nameKr"]
 
-
-
                 else:
-                    
                     if task["extra_code"] == task_name and task["context"] == task["process"]+"/"+context_name:
                         artist_task = artist
                         project = connect_shot_proj[item]
@@ -4209,7 +3549,6 @@ class DxManager(QMainWindow):
 
                         if artist == userID:
                             artist_kr = self.currName_kr
-                    
                         else:
                             artist_kr = teamInfo[0][artist]["nameKr"]                    
 
@@ -4218,12 +3557,10 @@ class DxManager(QMainWindow):
         shotManday = ""
         status = ""
         identifier = "noContext"
-
         progressValue_shot = 0.0
         progressValue_proj = 0.0
 
         if artist_task != None :
-
             bid_proj = 0.0
             act_proj = 0.0
             taskName = item[1]
@@ -4237,16 +3574,12 @@ class DxManager(QMainWindow):
                 if identifier == "haveContext":
                     task = taskName.split('/')[0]
                     context = taskData["process"]+"/" + taskName.split('/')[1]
-
                 else: 
                     task = taskName
                     context = taskData["process"]
 
-
-
                 if project.lower() in list(self.projects.keys()):
                     projTitle = self.projects[project.lower()][1]
-
 
                 # 샷 맨데이 설정
                 if taskData["extra_code"] == task and taskData["context"] == context:
@@ -4268,7 +3601,6 @@ class DxManager(QMainWindow):
                             progressValue_shot = (float(act) / float(bid))*100
                             if progressValue_shot > 100:
                                 progressValue_shot = 100
-
                         elif bid == 0:
                             progressValue_shot = 0                            
 
@@ -4278,24 +3610,18 @@ class DxManager(QMainWindow):
                     shotManday = str(act) + " / " + str(bid)
 
 
-
                 # 프로젝트 맨데이 설정
                 if taskData["project_code"] == self.projects[project.lower()][0]:
-
                     if taskData["bid_manday"] != None:
                         bid_proj += float(taskData["bid_manday"])
 
-                    #else:
-                    #    bid_proj += 0
                     if taskData["active_manday"] != None:
                         act_proj += float(taskData["active_manday"])
-
                     else:
                         act_proj += 0
 
                     if bid_proj == 0:
                         progressValue_proj = 0
-
                     else:
                         progressValue_proj = (float(act_proj) / float(bid_proj))*100
                         if progressValue_proj > 100:
@@ -4312,14 +3638,11 @@ class DxManager(QMainWindow):
     # 리스트뷰내 아이템 더블클릭시 해당태스크 디테일정보를 띄우는 다이얼로그 창
     def openTaskInfoWin(self,listView, index):
 
-        #self.taskInfomationDialog
-
         # 이미 실행되어있는 중복되는 창 삭제
         if self.taskInfomationDialog is not None:
             self.taskInfomationDialog.close()
             self.taskInfomationDialog.deleteLater()
             self.taskInfomationDialog = None
-
 
         taskInfoJson = self.import_Json(currentPath+"/.task_info", userID+"_task_info.json")
         self.taskInfomationDialog = taskInfoDialog.TaskInfoDialog(self)
@@ -4330,26 +3653,21 @@ class DxManager(QMainWindow):
         shotManday = ""
         status = ""
         identifier = "noContext"
-
         self.progressValue_shot = 0.0
         self.progressValue_proj = 0.0
 
-
         if isinstance(listView, QListView):
-
             item = listView.model().data(index, Qt.DisplayRole)
+
             if "/" in item[1]:
                 task_name = item[1].split('/')[0]
                 context_name = item[1].split('/')[1]
-
             else:
                 task_name = item[1]
                 context_name = None
 
             project = connect_shot_proj[item]
-
             start, end, shotManday, projManday, progressValue_shot, progressValue_proj, status, artist, artistKr, projTitle, process = self.get_TaskInfo_wip(item, taskInfoJson, project)
-
 
             # 현재 태스크가 속한 프로젝트의 샷진행 현황 가져오기
             shotStatus, shotProgressValue, progressBar_set, wipValue, wip_shots = self.get_status_projectShot(taskInfoJson, project, artist ) 
@@ -4360,7 +3678,6 @@ class DxManager(QMainWindow):
             # 태스크 평가등급 리스트
             eval_list = ["Excellent", "Good", "Weak"]
 
-
             # 샷맨데이 프로그레스바 스타일셋업
             shot_act_manday = shotManday.split(" / ")[0]
             shot_bid_manday = shotManday.split(" / ")[1]
@@ -4370,35 +3687,7 @@ class DxManager(QMainWindow):
 
             else: shot_bid_manday = float(shot_bid_manday)
 
-
-
-            """
-            # 택틱 bd 맨데이와 스케쥴bd맨데이가 다른 태스크의 데이타프레임 만들기
-            tempBid_path = currentPath + "/.temp_BDmanday/edited_mandayData.json" 
-            tempBid_df = pd.read_json(tempBid_path)
-
-            sel_taskName = item[1] # 선택된 태스크의 태스크이름
-            sel_part = item[4] # 선택된 태스크의 파트
-
-            tempTask_sr = tempBid_df[0]  # 
-            if sel_taskName in tempTask_sr.values: # 편집된 BD맨데이를 가진 샷들 리스트에 선택된 태스크가 있는지 확인
-                indices = tempBid_df[(tempBid_df[0] == sel_taskName) & (tempBid_df[2] == sel_part)].index.tolist() # 해당 태스크의 인덱스 가져오기
-                taticMandays = item[2]
-                taticAct = str(taticMandays.split("/")[0])
-                editBD = str(tempBid_df.loc[indices[0]][1]) # 편집된 BD 맨데이 가져오기               
-
-                newMandays = taticAct + "/" + editBD
-
-                list_item = list(item)
-                list_item[2] = newMandays
-                tuple_item = tuple(list_item)
-
-                #print (tuple_item)
-            """  
-
-
             shot_progressBar_style = self.setup_manday_progressBar(shot_act_manday, shot_bid_manday, progressValue_shot)
-
 
             # 프로젝트맨데이 프로그레스바 스타일셋업
             proj_act_manday = float(projManday.split(" / ")[0])
@@ -4406,7 +3695,6 @@ class DxManager(QMainWindow):
 
             if proj_bid_manday == "None":
                 proj_bid_manday = 0
-
             else: proj_bid_manday = float(proj_bid_manday)
 
             proj_progressBar_style = self.setup_manday_progressBar(proj_act_manday, proj_bid_manday, progressValue_proj)
@@ -4428,17 +3716,12 @@ class DxManager(QMainWindow):
         if self.job == "팀원":
             self.taskInfomationDialog.ui.frame_grade.hide()
             self.taskInfomationDialog.ui.label_grade.hide()
-            #self.taskInfomationDialog.ui.frame_value.hide()
-            #self.taskInfomationDialog.ui.combo_evaluation.hide()            
 
-        #bidManday = shotManday.split(" / ")[1]
         if int(shot_bid_manday) == 0:
             self.taskInfomationDialog.ui.progressBar_shotManday.setTextVisible(False)
-            #self.taskInfomationDialog.ui.label_shotManday.setStyleSheet("color : #D0D0D0")                
 
         if int(proj_bid_manday) == 0:
             self.taskInfomationDialog.ui.progressBar_projManday.setTextVisible(False)
-            #self.taskInfomationDialog.ui.label_projManday.setStyleSheet("color : #D0D0D0")                
 
         self.taskInfomationDialog.ui.combo_evaluation.hide()
         self.taskInfomationDialog.ui.frame_value.hide()
@@ -4508,11 +3791,8 @@ class DxManager(QMainWindow):
     # 초기 스케쥴 리스트뷰 UI생성
     def setUp_listViewUI(self):
 
-        #global rangeEndDate
-
         numberListView = int(self.listViewNumLineEdit.text())
 
-        #currentDate = QDate.currentDate()
         today = QDate.currentDate()
         monday = today.addDays(-today.dayOfWeek()+1)
         friday = monday.addDays(4) 
@@ -4562,15 +3842,11 @@ class DxManager(QMainWindow):
 
             # 리스트뷰내 아이템을 더블클릭하면 테스크 정보창이 생성
             newListview.listView_day.doubleClicked.connect(lambda index: self.openMedia(self.current_focused_list_view, index))#new_listView, index))
-            #newListview.listView_day.doubleClicked.connect(lambda index: self.openTaskInfoWin(self.current_focused_list_view, index))#new_listView, index))
 
             # 초기 리스트뷰 생성에 컨텍스트 메뉴 연결
             newListview.listView_day.setContextMenuPolicy(Qt.CustomContextMenu)
             newListview.listView_day.customContextMenuRequested.connect(
                 lambda pos, lv=newListview.listView_day: self.show_context_menu(lv, pos))
-
-
-            #openMedia(self, listview, index)
 
             # label_dow 가 토요일이나 일요일일경우 색깔변경
             if label_dow == 6 or label_dow == 7:
@@ -4582,7 +3858,6 @@ class DxManager(QMainWindow):
         self.rangeEndDate = range_date[1] # ui 처음 생성시 전역변수 rangeEndDate에 enddate 저장
 
 
-        #self.listViewScroll.horizontalScrollBar().setValue(mm/2)#self.listViewScroll.horizontalScrollBar().maximum())
 
         #######################################################################################
         # 처음 ui를  켰을때 현재 등록시킨 스케쥴을 표시하게 하기위해 현재기준 앞뒤 한주씩의 기간 설정
@@ -4595,8 +3870,6 @@ class DxManager(QMainWindow):
         betweenDate = {}
         day_count = 0
         date = lastWeek_monday
-
-
 
 
         if jsonData != []:
@@ -4622,20 +3895,13 @@ class DxManager(QMainWindow):
 
                 date = date.addDays(1)
 
-
             betweenDate_df = pd.DataFrame(dates)
-
             columns_compare = ["year", "month", "day"] # 현재유저의 스케쥴어싸인 데이타프레임과 3주간의 날짜를 비교하여 일치하는것을 찾기위해 비교할 날짜 컬럼 리스트
-
             mask1 = betweenDate_df[columns_compare].apply(tuple, axis=1)
             mask2 = user_df[columns_compare].apply(tuple, axis=1)
             commonValues = set(mask1).intersection(set(mask2)) # 두마스크의 일치되는 것만 뽑아낸 set
-
             recentWork_df = user_df[mask2.isin(commonValues)] # 일치하는 날짜에 해당하는 스케쥴어싸인 데이타프레임
-
             userTasks = recentWork_df['tasks'] # task컬럼만 시리즈로 추출
-
-            
 
             # jsonData 안의 현재 유저의 스케쥴 데이타들중 task부분만 추출하여 set연산자를 통해 현재 진행중인 프로젝트 이름만 추출
             projects = set()
@@ -4649,7 +3915,6 @@ class DxManager(QMainWindow):
                 projName = self.projects[projCode][1]
                 if projName not in projLong_list:
                     projLong_list.append(projName)
-
 
             # 뽑아낸 프로젝트 이름을 이용하여 UI상의 프로젝트 리스트뷰에서 해당 프로젝트를 선택
             proj_model = self.projListview.model()
@@ -4665,21 +3930,16 @@ class DxManager(QMainWindow):
         numListview = self.listViewNumLineEdit.text()
 
         for i in range(int(numListview)):
-            #layout = self.day_listViewLayout.itemAt(i)
-
             widget = self.dayUi.splitter.widget(i)
             layout = widget.layout()
 
             if layout:
                 frame = layout.itemAt(2).widget()
                 dateIndex = layout.itemAt(0).widget()
-
                 date = dateIndex.text()
                 dateSplit = date.split(" (")
-
                 month = str(today.month())
                 day = str(today.day())
-
                 todayString = month + "/" + day
 
                 if dateSplit[0] == todayString:
@@ -4687,8 +3947,6 @@ class DxManager(QMainWindow):
                     self.manager.set_active_container(frame, layout, False)
 
         self.update_splitter_size() # 생성된 리스트뷰들의 갯수의 합보다 scroll area 의 크기를 더크게 셋팅하여 splitter 작동되도록 함
-
-
 
 
 
@@ -4713,21 +3971,16 @@ class DxManager(QMainWindow):
 
     def eventFilter(self, source, event):
 
-
         if event.type() == QEvent.FocusIn and isinstance(source, QListView):
             self.current_focused_list_view = source
 
-
-
         if source is self.teamTree and event.type() == QEvent.MouseButtonPress:
-
             index = self.teamTree.indexAt(event.pos())
 
             if index.isValid():
                 item = self.teamTreeModel.itemFromIndex(index)
 
                 if item and item.isCheckable():
-
                     #체크박스 클릭 감지
                     rect = self.teamTree.visualRect(index)
                     opts = QStyleOptionViewItem(self.teamTree.viewOptions())
@@ -4755,10 +4008,7 @@ class DxManager(QMainWindow):
 
 
 
-
-
     def makeListView(self, label, listView, parentLayout, childLayout, scaleUI):
-
 
         listViewLayout = QVBoxLayout()
         listViewLayout.setObjectName(childLayout)
@@ -4770,75 +4020,53 @@ class DxManager(QMainWindow):
         font_label.setBold(True)
         font_label.setWeight(75)
         label_day.setFont(font_label)
-
         listViewLayout.addWidget(label_day, 0, Qt.AlignHCenter)
-
-        # 소팅을 위한 버튼추가
-        #sortBtn_name = QPushButton(parentLayout)
-        #sortBtn_name.setObjectName("sortBtn_taskName")
-        #listViewLayout.addWidget(sortBtn_name)
-
-
 
         listView_day = ddlv.dropListView(self.dayScheduleFrame)
         listView_day.setEditTriggers(QAbstractItemView.NoEditTriggers) # 더블클릭시에 에딧모드로 들어가지 않도록 함
         listView_day.setObjectName(listView)
-        #listView_day.setMaximumSize(800, 10000)
         listView_day.setMinimumSize(scaleUI, 0)
         listView_day.installEventFilter(self)
 
         font_listView = QFont()
         font_listView.setPointSize(9)
         listView_day.setFont(font_listView)
-
         listViewLayout.addWidget(listView_day)
-
         parentLayout.addLayout(listViewLayout)
 
         return listView_day, listViewLayout
 
 
 
+
     # 리스트뷰 내 아이템의 리스트 가져오기 / jsonData내에 있지만 리스트뷰에 보여지지 않는 아이템들도 가져오기
     def getListViewItem_inJson(self, listView, members):
 
-        #num_listview = self.day_listViewLayout.count()
         num_listview = self.dayUi.splitter.count()
 
         label_index = 0
-
         listView_list=[]
         for i in range(num_listview):
-            #listview_layout = self.day_listViewLayout.layout().itemAt(i)
 
             widget = self.dayUi.splitter.widget(i)
             listview_layout = widget.layout()
 
-
             if listview_layout:
-                #listview_point = listview_layout.layout().itemAt(2)
                 frame = listview_layout.itemAt(2).widget()
                 frameLayout = frame.layout()
                 listview_widget = frameLayout.itemAt(0).widget()
-
-                #listview_widget = listview_point.widget()
                 listView_list.append(listview_widget)
 
-
-        #date_labels = self.getLabelData_test(direction)
         date_labels = self.getLabelData()
-
 
         listView_date = ''
         for i in range(len(listView_list)):
             if listView.objectName() == (listView_list[i].objectName()):
                 listView_date = date_labels[i]
 
-
         listView_year = listView_date.split('/')[0]
         listView_month = listView_date.split('/')[1]
         listView_day = listView_date.split('/')[2]
-
 
         taskList = []
         for data in jsonData: 
@@ -4858,10 +4086,6 @@ class DxManager(QMainWindow):
                             if task_proj_part not in taskList:
                                 taskList.append(task_proj_part)
 
-                            #task_dep[task] = data["department"]
-                            #if task_dep not in taskList:
-                            #    taskList.append(task_dep)
-
         tuple_tasks = self.convert_to_tuple(taskList, members)
 
         return (tuple_tasks)
@@ -4877,11 +4101,8 @@ class DxManager(QMainWindow):
         num = range(model.rowCount(QModelIndex()))
 
         for row in range(model.rowCount(QModelIndex())):
-            
             index = model.index(row)
             allIndex.append(index)
-
-        #currItems = [listView.model().data(index, Qt.DisplayRole) for index in allIndex]
 
         currItems = []
         for index in allIndex:
@@ -4898,15 +4119,6 @@ class DxManager(QMainWindow):
     # 리스트뷰내 선택되어진 아이템들의 리스트 가져오기
     def getListView_selectedItem(self, listView):
 
-        #model = listView.model()
-        #allIndex = []
-        #num = range(model.rowCount(QModelIndex()))
-
-        #for row in range(model.rowCount(QModelIndex())):
-            
-        #    index = model.index(row)
-        #    allIndex.append(index)
-
         selected_indexes = listView.selectedIndexes()
 
         currItems = []
@@ -4917,20 +4129,6 @@ class DxManager(QMainWindow):
                 currItems.append(item)
 
         return currItems
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -4965,14 +4163,11 @@ class DxManager(QMainWindow):
 
 
 
-
-
     # 스케쥴 데이타 가져오기
     def getJsonData(self):
 
         global teamTreeHierarchy
         global jsonData
-
 
         jsonFile_user = os.path.join(jsonFilePath, userID+"_Data.json")
 
@@ -4981,38 +4176,6 @@ class DxManager(QMainWindow):
 
             # 읽어온 스케쥴데이타의 데이타프레임을 딕셔너리로 바꾼뒤 jsonData에 추가
             jsonData.extend(df_importedJson.to_dict(orient='records'))
-
-        #########################################################################
-        ####  판다스 데이타프레임 형식으로 수정
-
-        # 현재유저의 기존 저장된 스케쥴을 가져와서 jsonData에 저장
-        #importedJson_user=[]
-        #if(os.path.exists(jsonFile_user)):
-        #    with open(jsonFile_user) as f:
-        #        importedJson_user = json.load(f)
-
-        #df = pd.read_json(jsonFile_user)
-
-        #df['tasks'] = df['tasks'].apply(lambda x: self.searchEmptyProj(x))
-        #df_importedJson = df.loc[df['tasks'].apply(lambda x:x != [{}])]        
-
-        """
-        for data in importedJson_user:
-            projList = list(data['tasks'][0].keys()) 
-            if data['tasks'] != [{}]: # and data not in jsonData:
-                for proj in projList:
-                    if data['tasks'][0][proj] != [] and data not in jsonData:
-                        jsonData.append(data)
-
-                    elif data['tasks'][0][proj] == []:
-                        del data['tasks'][0][proj]
-
-            if data['tasks'] == [{}]:
-                del data
-
-            elif "notExist" in data["tasks"][0]:
-                del data["tasks"][0]["notExist"]
-        """
 
         # 현재 멤버트리뷰의 루트아이템을 읽어들인뒤 그 하위의 체크되어있는 모든 멤버들을 리스트로 만들고 영어이름으로 변환
         invisibleRoot = self.teamTreeModel.invisibleRootItem()
@@ -5046,51 +4209,6 @@ class DxManager(QMainWindow):
 
 
 
-
-
-
-
-        """
-                importedJson_member=[]
-                if(os.path.exists(jsonFile_member)):
-                    with open(jsonFile_member) as f:
-                        importedJson_member = json.load(f)
-
-                for data in importedJson_member:
-                    projList = list(data['tasks'][0].keys()) 
-                    if data['tasks'] != [{}] : #and data not in jsonData:
-                        for proj in projList:
-                            if data["tasks"][0][proj] != [] and data not in jsonData:
-                                jsonData.append(data)
-
-                    elif "notExist" in data["tasks"][0]:
-                        del data["tasks"][0]["notExist"]
-        """
-
-
-
-
-
-
-
-        # jsonData 에 있는 데이타들을 튜플로 전환하여 프로젝트와 짝지어 전역변수에 저장
-        #tuple_tasks = self.convert_to_tuple_test(tasks, checked_items_list_En)
-
-
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
     # 팀트리 창에서 현재 선택되어있는 팀원들의 리스트를 가져오기
     def getCheckedMember(self):
 
@@ -5099,10 +4217,8 @@ class DxManager(QMainWindow):
         rootItem = invisibleRoot.child(0)
         teamInfo = self.getTeamInfo(userID)
 
-
         checkedMembers = []
         self.get_CheckedItems(rootItem, checkedMembers)
-
 
         EN_members=[]
         if rootItem.checkState() == Qt.Checked: #현재유저가 체크가 되어있으면 영어리스트에 현재유저를 먼저추가함.
@@ -5119,30 +4235,17 @@ class DxManager(QMainWindow):
 
 
 
-
-
     def getLabelData(self):
 
-        #global rangeEndDate
-
-
-        #num_listview = self.day_listViewLayout.count()
         num_listview = self.dayUi.splitter.count()
-
-
         rangeHalfDate = QDate(self.rangeEndDate.addDays(-1*(num_listview)/2))
-
-
         numberListView = int(self.listViewNumLineEdit.text())
-
 
         currentDate = rangeHalfDate
 
         currentDay = currentDate.day()
         currentMonth = currentDate.month()
         currentYear = currentDate.year()
-
-
         value_addDay = int(num_listview / 2)
 
         label_data = []
@@ -5157,10 +4260,8 @@ class DxManager(QMainWindow):
             label_dow = QDate(int(currentYear), int(currentMonth), int(currentDay)).addDays(currentValue_day).dayOfWeek()
             label_date = QDate(label_year, label_month, label_day)
 
-
             listViewName = "listView_" + str(i)
-            labelName = str(label_year) + "/" + str(label_month) + "/" + str(label_day) #+ " ( "+weekDay[label_dow]+" )"
-
+            labelName = str(label_year) + "/" + str(label_month) + "/" + str(label_day)
             label_data.append(labelName)
 
         return label_data            
@@ -5168,23 +4269,15 @@ class DxManager(QMainWindow):
 
 
 
-
-
     # 드래그 드랍 아이템 시그널 받아오기
     def get_dropEvent(self, dropped_items, listView_name):
 
-        #num_listview = self.day_listViewLayout.count()
         num_listview = self.dayUi.splitter.count()
 
-        #    widget = self.dayUi.splitter.widget(i)
-        #    layout = widget.layout()
-
         label_index = 0
-
         listView_list=[]
         for i in range(num_listview):
 
-            #listview_layout = self.day_listViewLayout.layout().itemAt(i)
             widget = self.dayUi.splitter.widget(i)
             listview_layout = widget.layout()
 
@@ -5204,7 +4297,6 @@ class DxManager(QMainWindow):
         dropData['drop_date']=drop_date
         dropData['drop_items']=dropped_items
 
-
         self.updateJson(0)  
 
         # 스케쥴 리스트뷰로 드래그 드랍이 발생한 경우 샷리스트뷰의 태스크 색을 회색으로 변경
@@ -5218,15 +4310,12 @@ class DxManager(QMainWindow):
     def keyPressEvent(self, event):
 
         if event.key() == Qt.Key_Delete:# and self.current_focused_list_view:
-
             # 현재 스케쥴 리스트뷰의 갯수
-            #num_listview = self.day_listViewLayout.count()
             num_listview = self.dayUi.splitter.count()
 
             # 현재 스케쥴 리스트뷰의 태스크들을 listView_task 리스트에 저장
             listView_task = []
             for i in range(num_listview):
-                #listview_layout = self.day_listViewLayout.layout().itemAt(i)
                 widget = self.dayUi.splitter.widget(i)
                 listview_layout = widget.layout()
 
@@ -5239,20 +4328,6 @@ class DxManager(QMainWindow):
 
             self.updateJson(0)
             self.reloadShotList()
-
-
-        """
-        if event.key() == Qt.Key_Delete and self.current_focused_list_view:
-            self.delete_selected_items(self.current_focused_list_view)
-
-            self.updateJson(0)
-            self.reloadShotList()
-
-
-        else:
-            #super(dxManager, self).keyPressEvent(event)
-            QMainWindow.keyPressEvent(self,event)
-        """
 
 
 
@@ -5295,13 +4370,10 @@ class DxManager(QMainWindow):
     # 현재 생성되어 있는 모든 리스트뷰의 리스트 반환
     def get_listview_list(self):
 
-        #num_listview = self.day_listViewLayout.count()
         num_listview = self.dayUi.splitter.count()
-
 
         listView_list=[]
         for i in range(num_listview):
-            #listview_layout = self.day_listViewLayout.layout().itemAt(i)
             widget = self.dayUi.splitter.widget(i)
             listview_layout = widget.layout()
 
@@ -5321,14 +4393,12 @@ class DxManager(QMainWindow):
     def delete_selected_items(self, list_view):
 
         listView_name = list_view.objectName() # 아이템 삭제가 발생한 리스트뷰의 이름을 가져오기
-        #num_listview = self.day_listViewLayout.count()
         num_listview = self.dayUi.splitter.count()
 
         label_index = 0
 
         listView_list=[]
         for i in range(num_listview):
-            #listview_layout = self.day_listViewLayout.layout().itemAt(i)
             widget = self.dayUi.splitter.widget(i)
             listview_layout = widget.layout()
 
@@ -5373,8 +4443,6 @@ class DxManager(QMainWindow):
 
 
 
-
-
     # 특정 리스트뷰의 빈곳을 클릭하였을때 다른 모든 리스트뷰와 그안의 선택된 아이템들을 포함한 모든 아이템 선택해제
     def clear_selection(self):
 
@@ -5382,12 +4450,6 @@ class DxManager(QMainWindow):
         
         for listview in listviews:
             listview.selectionModel().clearSelection()
-
-
-
-
-
-
 
 
 
@@ -5409,20 +4471,15 @@ class DxManager(QMainWindow):
 
 
 
-
-
     # 현재 리스트뷰들의 태스크들로 제이슨파일 업데이트하기
     def updateJson(self,direction):
 
         global jsonData
         global connect_shot_proj
 
-
         # 팀멤버 트리뷰에서 체크되어있는 멤버 가져오기
         checkedMembers = self.getCheckedMember()
 
-        # 현재 유저 하위에 등록되어있는 팀원 정보 가져오기
-        #teamInfo = self.getTeamInfo(userID)
         teamInfo = [{}]
         for mem in list(self.memberCache_.keys()):
 
@@ -5433,15 +4490,11 @@ class DxManager(QMainWindow):
                         teamInfo[0][teamMem] = memberInfo[0][teamMem]
 
         # 현재 스케쥴 리스트뷰의 갯수
-        #num_listview = self.day_listViewLayout.count()
         num_listview = self.dayUi.splitter.count()
-
 
         # 현재 스케쥴 리스트뷰의 태스크들을 listView_task 리스트에 저장
         listView_task = []
         for i in range(num_listview):
-            #listview_layout = self.day_listViewLayout.layout().itemAt(i)
-
             widget = self.dayUi.splitter.widget(i)
             listview_layout = widget.layout()
 
@@ -5450,12 +4503,8 @@ class DxManager(QMainWindow):
                 frameLayout = frame.layout()
                 listview = frameLayout.itemAt(0).widget()
 
-                #listview_point = listview_layout.layout().itemAt(2)
-                #listview = listview_point.widget()
-
                 tasks = self.getListViewItem(listview) # 현재 ui상에 디스플레이되어있는 아이템들 가져오기
                 tasks_inJson = self.getListViewItem_inJson(listview, checkedMembers)
-
 
                 if tasks_inJson:
                     for task_ in tasks_inJson:
@@ -5464,14 +4513,11 @@ class DxManager(QMainWindow):
 
                 listView_task.append(tasks)
 
-
         # 현재 스케쥴 리스트뷰의 날짜정보 가져오기
         listView_date = self.getCurrentListViewDate(0)
 
-
         # 현재 샷 리스트상에 로드된 샷들의 태스크정보 읽어오기
         taskInfoJson = self.import_Json(currentPath+"/.task_info", userID+"_task_info.json")
-
 
         # 현재 체크된것과 상관없이 모든 팀원 리스트 읽어오기
         memberList = list(teamInfo[0].keys())
@@ -5481,7 +4527,6 @@ class DxManager(QMainWindow):
 
         member_projectTasks={}
         for member in taskInfoJson:
-
             connect_shot_proj_keyList = list(connect_shot_proj.keys())
 
             for i in range(len(listView_task)):
@@ -5491,34 +4536,24 @@ class DxManager(QMainWindow):
                 task_data={}
                 department = ""
 
-
                 for task in listView_task[i]:
 
                     process=""
+
                     if task[4] == "M":
                         process = "matchmove"
-
                     elif task[4] == "A":
                         process = "animation"                        
-
                     elif task[4] == "R":
                         process = "creature"
-
 
                     projCode = ""
                     if task in connect_shot_proj_keyList:   # 프로젝트와 샷을 연결시킨 전역변수 connect_shot_proj 내에 샷이 있는지 확인후, 있으면 연결된 프로젝트 반환
                         proj = connect_shot_proj[task]
                         projCode = self.projects[proj][0]
 
-
-                    #elif task not in connect_shot_proj_keyList:
-                    #    proj = self.findProj(task) # 저장되어있는 스케쥴 제이슨 파일을 검색해서 프로젝트를 찾기
-                    #    projCode = self.projects[proj][0]
-
-
                     if member in memberList:
 
-                        #print (member)
                         for taskInfo in taskInfoJson[member]:
                             if projCode == taskInfo["project_code"]: # 서로다른 프로젝트의 같은 이름의 태스크를 구별하기 위해 프로젝트가 같은지 확인
                                 identifier = 'noContext'
@@ -5542,7 +4577,6 @@ class DxManager(QMainWindow):
                                         
                                         if proj in projs:
                                             task_fullName = taskName+"/"+subContext_
-
                                             if task_fullName not in projectTasks[proj]:
                                                 projectTasks[proj].append(task_fullName)
 
@@ -5572,13 +4606,11 @@ class DxManager(QMainWindow):
 
                 task_data = {"artist":member, "year":listView_date[i]["year"], "month":listView_date[i]["month"], "day":listView_date[i]["day"], "tasks":[projectTasks], "department":department}#, "tasks":listView_task[i]}
 
-
                 # jsonData내의 모든 스캐쥴데이터중 task_data와 동일한 날짜인 모든 데이터를 filterDate_inJson안에 리스트로 저장(아티스트변경에 따른 오류를 체크하기 위해)
                 filterDate_inJson = [item for item in jsonData
                                         if item["year"] == listView_date[i]["year"]
                                         and item["month"] == listView_date[i]["month"]
                                         and item["day"] == listView_date[i]["day"]]
-
 
                 # 생성된 task_data의 어싸인 업데이트가 있었는지 확인하고 있었다면, jsonData내의 스케쥴 데이타를 삭제하고, 현재 진행중이던 태스크의 스케쥴생성은 중단함.
                 if self.check__Task_data(task_data, filterDate_inJson):
@@ -5586,8 +4618,6 @@ class DxManager(QMainWindow):
 
                 if jsonData == []:
                     jsonData.append(task_data)
-   
-  
                 else:
                     for data in jsonData:
                         #if (listView_date[i]["year"] == data["year"] and listView_date[i]["month"] == data["month"] and listView_date[i]["day"] == data["day"]):
@@ -5597,7 +4627,6 @@ class DxManager(QMainWindow):
                             if data["tasks"][0] == {} and task_data["tasks"][0] != {}:
                                 jsonData.remove(data)
                                 jsonData.append(task_data)
-
 
                             # task_data와 같은 날짜의 jsonData에 스케쥴 데이타가 존재하지만, task_data에 있는 프로젝트가 존재하지 않을때, 
                             # task_data에 현재 존재하는 jsonData의 데이타를 추가한뒤 이 jsonData를 지우고  task_data를 jsonData에 추가함
@@ -5613,7 +4642,6 @@ class DxManager(QMainWindow):
                                         if task_data not in jsonData:
                                             jsonData.append(task_data)
 
-
                                     elif project in task_data["tasks"][0]:
                                         for task in data["tasks"][0][project]:
                                             if task not in task_data["tasks"][0][project]:
@@ -5624,7 +4652,6 @@ class DxManager(QMainWindow):
 
                                         if task_data not in jsonData:
                                             jsonData.append(task_data)
-
 
                         elif  (task_data not in jsonData): 
                             if ((self.check_date_exists(jsonData, task_data) == False) or (data["artist"] != member)):
@@ -5653,7 +4680,6 @@ class DxManager(QMainWindow):
                 dict_item["artist"] == task_dict["artist"]):
                 return True
         return False
-            
 
 
     def check_artist_exists(self, json_dicts, task_dict):
@@ -5663,16 +4689,6 @@ class DxManager(QMainWindow):
         return False
      
 
-
-    '''
-    def check_value_in_Dict(self, dictList, element):
-        for dict in dictList:
-            for key, value in dict.items():
-                if isinstance(value, list) and element in value:
-                    return True
-        return False
-    '''
-
     def check_value_in_Dict(self, dictList, element):
         for dict in dictList:
             if dict['tasks'] != [{}]:
@@ -5681,9 +4697,6 @@ class DxManager(QMainWindow):
                         return True
 
         return False                        
-
-
-
 
 
 
@@ -5697,7 +4710,6 @@ class DxManager(QMainWindow):
 
                         for filterProj in filterData["tasks"][0]:
                             if task in filterData["tasks"][0][filterProj]:
-
                                 delAssign = filterData["artist"]
                                 newAssign = taskData["artist"]
 
@@ -5737,7 +4749,6 @@ class DxManager(QMainWindow):
                                 del data['tasks'][0][proj]
 
             # 하나의 태스크도 존재하지 않으면 스케쥴 데이터 자체를 삭제
-
             del_data = []
             for i in range(len(delAssign_json)):
                 if delAssign_json[i]['tasks'] == [{}]:
@@ -5754,61 +4765,41 @@ class DxManager(QMainWindow):
 
 
 
-
     # 한칸 앞, 또는 한칸 뒤로 이동을 위한 ui 의 요청에 따라 스케쥴 리스트뷰의 내용을 갱신
     def move_sideways(self, direction, scheduleData):
 
         old_listViewDate = self.getCurrentListViewDate(0)
         listViewDate = self.getCurrentListViewDate(direction)
-        #listViewNum = self.day_listViewLayout.count()
         listViewNum = self.dayUi.splitter.count()
 
-        #num_currentListView = self.day_listViewLayout.count()
         num_currentListView = self.dayUi.splitter.count()
 
-
         movedDate = QDate(self.rangeEndDate.addDays(direction))
-
         self.setListviewDate(movedDate, num_currentListView)
         self.comboDay.setCurrentText(str(movedDate.day()))
         self.comboMonth.setCurrentText(str(movedDate.month()))        
         self.comboYear.setCurrentText(str(movedDate.year()))
 
-        
         # 프로젝트 리스트에서 선택된 프로젝트 가져오기
-        selected_indexes = self.projListview.selectedIndexes()
-        selectedItems = [index.data() for index in selected_indexes]
-
-        #프로젝트 리스트에서 선택된 프로젝트들 가져오기
-        selectedProj = []
-        for item in selectedItems:
-            for proj in self.projects:
-                if self.projects[proj][1] == item:
-                    selectedProj.append(proj)
+        # 프로젝트 리스트에서 선택된 프로젝트들 가져오기
+        selectedProj = self.get_selected_projects()
 
         # 현재 ui에 표시되어있는 스케쥴 리스트뷰 가져오기(옮기기전)
         listViews=[]
         frameDic = {} # 현재 선택된 프레임을 표시하여 딕셔너리 저장 : 하이라이트를 이동에 따라 힘께 이동시키기 위해
         layouts = []
         for i in range(listViewNum):
-            #layout = self.day_listViewLayout.itemAt(i)
             widget = self.dayUi.splitter.widget(i)
             layout = widget.layout()
-
             layouts.append(layout)
 
             if layout:
-                #dateIndex = layout.itemAt(0).widget()
-                #date = dateIndex.text()
-                #dates.append(date)
-
                 frame = layout.itemAt(2).widget()
                 frameLayout = frame.layout()
                 listView = frameLayout.itemAt(0).widget()
                 listViews.append(listView)
 
                 self.manager.Move_sideway_setContainer(frame, layout)
-
 
                 # 현재 프래임의 선택 여부 확인후 딕셔너리 저장
                 sel = 0
@@ -5832,13 +4823,9 @@ class DxManager(QMainWindow):
         for mem in self.memberCache_:
             if self.memberCache_[mem] in checked_items_list_Kr:
                 checked_items_list_En.append(mem)
-        #--------------------------------------------------------------------------------------------------------------
 
         # jsonData 내의 데이타중 현재 체크되어있는 멤버의 데이타만 따로 저장
-
         refereshJsonData = []
-
-
         ######## < 삭제금지 >   
         # 컴프리헨션 가이드
         #for member in checked_items_list_En:
@@ -5851,19 +4838,13 @@ class DxManager(QMainWindow):
         # 데이터와 날짜를 이동시키기전 각 날짜에 대응하는 리스트뷰의 소팅정보 저장 -> 이동시킨 이후 이 소팅정보를 새로운 리스트뷰에 동일하게 적용하기 위해
         for i in range(len(old_listViewDate)):
             old_model = listViews[i].model()
-
-            #sortOrder[i] = old_model._sort_order
-            #sortColumn[i] = old_model._sort_column
-
             date = str(old_listViewDate[i]["year"]) + "-" + str(old_listViewDate[i]["month"]) + "-" + str(old_listViewDate[i]["day"])
-
             sortOrder_date[date] = old_model._sort_order
             sortColumn_date[date] = old_model._sort_column
 
         sortOrder = {}
         sortColumn = {}
-        #sortOrder_date = {}
-        #sortColumn_date = {}        
+
         inData_listViews = []
         for i in range(len(listViewDate)):
             tasks=[]
@@ -5918,10 +4899,6 @@ class DxManager(QMainWindow):
     def reset_splitter_size(self):
 
         listViewNum = int(self.listViewNumLineEdit.text())
-
-        #listViewNum = self.dayUi.splitter.count()
-        #splitter_width = self.dayUi.splitter.width()
-
         splitter_width = listViewNum*self.listview_minimum
 
         equal_size = splitter_width // listViewNum
@@ -5929,67 +4906,6 @@ class DxManager(QMainWindow):
 
         self.dayUi.splitter.setSizes(sizes)
         self.dayUi.splitter.setFixedWidth(splitter_width)
-
-
-
-
-    """
-            #################################################
-            ## 이상이 없는지 확인후 차후에 문제없으면 삭제예정##
-            #################################################
-
-            for i in range(listViewNum):
-                if i not in inData_listViews:
-                    emptyTasks = []
-
-                    # 갱신된 새로운 아이템들이 등록된 모델을 리스트뷰에 등록하기전 이전 모델 삭제를 위해 이전모델을 old_model에 저장
-                    old_model = listViews[i].model()
-
-                    sortOrder[i] = old_model._sort_order
-                    sortColumn[i] = old_model._sort_column
-
-                    shotlist_model = ddlv.DragDropModel(emptyTasks, sortColumn[i])
-                    listViews[i].setModel(shotlist_model)
-
-                    self.sortScheduleListview(shotlist_model, sortOrder[i], sortColumn[i])
-                    self.set_itemBackgroundColor(shotlist_model, listViewDate[i])
-                    self.set_listView_view(listViews[i], shotlist_model)
-    """
-
-
-    """
-        labelDate = []
-        for i in range(listViewNum):
-            layout = self.day_listViewLayout.itemAt(i)
-            if layout:
-                label = layout.itemAt(0).widget()
-                labelDate.append(label)
-
-        print (labelDate)
-    """
-    """
-        for i in range(len(listViewDate)):
-
-            ################################################################################
-            #### 날짜에 해당하는 리스트뷰를 찾아내어 그 리스트뷰의 모델을 소팅하도록 수정해야함
-        # 현재 ui에 표시되어있는 스케쥴 리스트뷰 가져오기
-
-            
-
-            date = str(listViewDate[i]["year"]) + "-" + str(listViewDate[i]["month"]) + "-" + str(listViewDate[i]["day"])
-
-            if date in sortOrder_date:
-
-                shotList_model = listViews[i].model()
-                self.sortScheduleListview(shotlist_model, sortOrder_date[date], sortColumn_date[date])
-
-
-    """
-
-
-
-
-
 
 
 
@@ -6001,15 +4917,7 @@ class DxManager(QMainWindow):
         listViewNum = self.dayUi.splitter.count()
 
         # 프로젝트 리스트에서 선택된 프로젝트 가져오기
-        selected_indexes = self.projListview.selectedIndexes()
-        selectedItems = [index.data() for index in selected_indexes]
-
-        selectedProj = []
-        for item in selectedItems:
-            for proj in self.projects:
-                if self.projects[proj][1] == item:
-                    selectedProj.append(proj)
-
+        selectedProj = self.get_selected_projects()
 
         listViews=[]
         for i in range(listViewNum):
@@ -6017,14 +4925,12 @@ class DxManager(QMainWindow):
             layout = widget.layout()
             #layout = self.day_listViewLayout.itemAt(i)
 
-
             if layout:
                 #listView = layout.itemAt(2).widget()
                 frame = layout.itemAt(2).widget()
                 frameLayout = frame.layout()
                 listView = frameLayout.itemAt(0).widget()
                 listViews.append(listView)
-
 
         # 현재 멤버트리뷰의 루트아이템을 읽어들인뒤 그 하위의 체크되어있는 모든 멤버들을 리스트로 만들고 영어이름으로 변환
         invisibleRoot = self.teamTreeModel.invisibleRootItem()
@@ -6034,9 +4940,7 @@ class DxManager(QMainWindow):
         self.get_CheckedItems(rootItem, checked_items_list_Kr)
 
         checked_items_list_En = []
-        #name_ko, role, team = self.checkUserInfo() # 현재유저의 값 가져오기
         teamInfo = self.import_Json(currentPath+"/.team_Info", userID+"_teamInfo.json")
-
 
         for mem in self.memberCache_:
             if self.memberCache_[mem] in checked_items_list_Kr:
@@ -6044,6 +4948,7 @@ class DxManager(QMainWindow):
 
         invalidTask_list = []    # 차후에 삭제 예정 : 컨텍스트 오류가 있는 프로젝트 마감후
         fixedTask_list = []     # 차후에 삭제 예정 : 컨텍스트 오류가 있는 프로젝트 마감후
+
         refereshJsonData = []
         for member in checked_items_list_En:
             for i in range(len(scheduleData)):
@@ -6065,19 +4970,6 @@ class DxManager(QMainWindow):
                             contextList = task.split('/')
                             invalid_task = contextList[0]+"/"+contextList[1]
 
-                            #self.contextFix[task][1] == member:
-
-                            print ("##")
-                            print (member)
-                            print (task)
-                            print (self.contextFix[task][1])
-
-                            ####################################################################################3
-
-                            ##   두명 동시에 보이게 할때 crowdAction 태스크 두개가 보였다 안보였다함, jsonData 직접 컨트롤이 문제가 되는것 같음.
-                            ##   임시수정이므로 완벽하게 고치지 않아도 된다.
-
-                            #####################################################################################
                             if  proj in jsonData[i]['tasks'][0]: 
                                 if self.contextFix[task][1] == member:
                                     if invalid_task in jsonData[i]['tasks'][0][proj]:
@@ -6090,17 +4982,10 @@ class DxManager(QMainWindow):
                                         
                                         fixedTask_list.append(editTask)
 
-
-
                     ##### 에러가 발생했을때 해당 태스크에 대한 내용을 로그데이터에 기록하고, 프로세스는 계속 이어지도록
-
-
-        #self.fix_context(invalidTask_list, fixedTask_list)
         ################################################################################################
         ################################################################################################
 
-        #print (refereshJsonData)
-        
 
         # 기존 모델에서 정렬 정보 먼저 수집
         sortOrder = {}
@@ -6119,11 +5004,8 @@ class DxManager(QMainWindow):
         for i in range(len(listViewDate)):
 
             tasks=[]
-            
             for data in refereshJsonData:
-
                 if data['year'] == listViewDate[i]['year'] and data['month'] == listViewDate[i]['month'] and data['day'] == listViewDate[i]['day']:
-
                     for projTask in data['tasks'][0]:
                         if projTask in selectedProj:
                             #proj_part.append(projTask)
@@ -6137,10 +5019,7 @@ class DxManager(QMainWindow):
                                 if task_dep not in tasks: # 리스트뷰안에 넣으려는 tasks리스트 안에 task가 이미 있는지 확인``
                                     tasks.append(task_dep)
 
-            #if self.ui.sel_allProj_checkBox.checkState() == Qt.Unchecked and self.select_ctxMenu == 0:
-
             tuple_tasks = self.convert_to_tuple(tasks, checked_items_list_En)
-
             inData_listViews.append(i)
 
             # 갱신된 새로운 아이템들이 등록된 모델을 리스트뷰에 등록하기전 이전 모델 삭제를 위해 이전모델을 old_model에 저장
@@ -6148,54 +5027,21 @@ class DxManager(QMainWindow):
 
             sortOrder[i] = old_model._sort_order
             sortColumn[i] = old_model._sort_column
-            #sortOrder.append(old_model._sort_order)
-            #sortColumn.append(old_model._sort_column)
 
             shotlist_model = ddlv.DragDropModel(tuple_tasks, sortColumn[i])
-            #shotlist_model._sort_order = sortOrder
             listViews[i].setModel(shotlist_model)
 
             # 이전 모델 삭제
             del old_model
 
-            #self.sortScheduleListview(shotlist_model, sortOrder[i], sortColumn[i])
-
             self.set_itemBackgroundColor(shotlist_model, listViewDate[i], listViews[i])
-
-            #self.set_listView_view(listViews[i], shotlist_model)
-
-            #################################################
-            ## 이상이 없는지 확인후 차후에 문제없으면 삭제예정##
-            #################################################
-            """
-            for i in range(listViewNum):
-                if i not in inData_listViews:
-                    emptyTasks = []
-
-                    # 갱신된 새로운 아이템들이 등록된 모델을 리스트뷰에 등록하기전 이전 모델 삭제를 위해 이전모델을 old_model에 저장
-                    old_model = listViews[i].model()
-
-                    sortOrder[i] = old_model._sort_order
-                    sortColumn[i] = old_model._sort_column
-
-                    shotlist_model = ddlv.DragDropModel(emptyTasks, sortColumn[i])
-                    listViews[i].setModel(shotlist_model)
-
-                    self.sortScheduleListview(shotlist_model, sortOrder[i], sortColumn[i])
-
-                    self.set_itemBackgroundColor(shotlist_model, listViewDate[i])
-
-                    self.set_listView_view(listViews[i], shotlist_model)
-            """
 
 
         # 스케쥴 리스트뷰의 새로고침 과정에서 각 리스트뷰의 소팅정보를 sortOrder_date, sortColumn_date 에 저장하였다가, 새로고침이 끝난후 해당 날짜를 찾아
         # 저장된 소팅정보대로 이전의 정렬과 같게 만들어줌
         for i in range(len(listViewDate)):
-
             shotList_model = listViews[i].model()
             date = str(listViewDate[i]["year"]) + "-" + str(listViewDate[i]["month"]) + "-" + str(listViewDate[i]["day"])
-
             dateDic = {"year":listViewDate[i]["year"], "month":listViewDate[i]["month"], "day":listViewDate[i]["day"]}
 
             if date in sortOrder_date:
@@ -6203,28 +5049,6 @@ class DxManager(QMainWindow):
 
             # refereshListView 메서드내에서 실행되어 스케쥴데이터가 업데이트될때마다 뷰필터 체크박스를 확인하여 내용을 갱신시킴
             self.set_listView_view(listViews[i], shotList_model)
-
-
-
-
-
-
-    #def fix_context(self, invalid_taskList, fixed_taskList):
-
-        #print (invalid_taskList)
-        #print ("##")
-        #print (fixed_taskList)
-
-        #for task in invalid_context_tasks:
-        #    print (task)
-
-
-
-
-
-
-
-
 
 
 
@@ -6236,7 +5060,6 @@ class DxManager(QMainWindow):
         for index in selectedIndexes:
             #print (index.data())
             self.projSelection_model.select(index, QItemSelectionModel.Select)            
-
 
 
 
@@ -6291,7 +5114,6 @@ class DxManager(QMainWindow):
         self.get_CheckedItems(rootItem, checked_items_list)
 
         checkedList_EN = [member for member in list(self.memberCache_.keys()) for memKR in checked_items_list if self.memberCache_[member] == memKR]
-        #########################################
 
         today = QDate.currentDate()
         monday = today.addDays(-today.dayOfWeek()+1)
@@ -6305,29 +5127,16 @@ class DxManager(QMainWindow):
 
         #selected_mem = []
         projs_currentMem = []
-
-        #if deselectAll == 1:
-        #    if teamMember:
-        #        if unchecked != 1 and memEN not in teamMember:
-
-
-        #if unchecked != 1:
-        # 이번주 완료해야할 태스크가 있는 프로젝트들을 가져옴
-        #checkedList_EN = [memEN]
         projs_currentMem = self.get_projs_currentMem(taskInfoJson, checkedList_EN)
         projLong_list = []
 
-
         for memEN in checkedList_EN:
-
             if memEN in taskInfoJson:
-
                 df_taskInfo = pd.DataFrame(taskInfoJson[memEN])
 
                 # end_date를 datetime으로 변환
                 df_taskInfo["end_date"] = pd.to_datetime(df_taskInfo["end_date"])
                 today = datetime.now()
-
                 today_weekday = today.weekday()
                 mon = today - timedelta(days=today_weekday)
                 fri = mon + timedelta(days=4)
@@ -6337,28 +5146,21 @@ class DxManager(QMainWindow):
                 thisWeek_proj_codes = df_thisWeek["project_code"].unique().tolist()
 
                 projs=[]
-                #if unchecked != 1:
                 if memEN in checkedList_EN:
                     projs = [proj for proj in self.projects for proj_code in thisWeek_proj_codes if self.projects[proj][0] == proj_code] 
-
 
                 for proj in projs:
                     if proj not in projs_currentMem:
                         projs_currentMem.append(proj)
 
-
                 # 이번주를 포함한 지난주 다음주 3주간의 스케쥴이 어싸인되어있는 프로젝트를 찾아 task_3w 에 저장
                 tasks_3w = []
-                #proj_3w = []
-
                 if jsonData != []:
                     for data in jsonData:
                         data_date = QDate(data["year"], data["month"], data["day"])
                         if lastWeek_monday <= data_date <= nextWeek_friday and data['artist'] == memEN:
                             tasks_3w.append(data)
 
-
-                #################################################################
                 for task_3w in tasks_3w:
                     if task_3w["tasks"]:
                         for proj in list(task_3w["tasks"][0].keys()):
@@ -6385,15 +5187,11 @@ class DxManager(QMainWindow):
             text_proj = proj_model.data(index)
 
             if text_proj != '관리개발 (testShot)':# and text_proj in projLong_list:
-
-                #if deselectAll == 1:
                 if text_proj not in projLong_list:
                     self.projSelection_model.select(index, QItemSelectionModel.Deselect)
-
                 else:
                     print (text_proj)
                     self.projSelection_model.select(index, QItemSelectionModel.Select)
-
 
         # 샷리스트뷰 셋업이 끝난뒤 projLong_list 초기화
         projLong_list = []
@@ -6402,57 +5200,8 @@ class DxManager(QMainWindow):
         self.currentProjs = projs_currentMem
 
 
-        """
-        #####################################################################################################3
-        ####  차후 문제없으면 삭제예정
-
-
-        elif memEN not in taskInfoJson:
-
-            projLong_list = []
-            currentProj_long_list = []
-
-            if projs_currentMem:
-                for proj in projs_currentMem:
-                    projLong_list.append(self.projects[proj][1])
-
-            if not projs_currentMem:
-                self.currentProjs = [proj for proj in self.currentProjs if proj in projs_currentMem]
-
-            else:
-                self.currentProjs = []
-
-
-
-            proj_model = self.projListview.model()
-
-
-            exceptCurrentProj = []
-
-            for row in range(proj_model.rowCount()):
-                index = proj_model.index(row, 0)
-                text_proj = proj_model.data(index)
-                if text_proj != '관리개발 (testShot)' and text_proj in projLong_list:
-                    if not self.projSelection_model.isSelected(index):
-                        self.projSelection_model.select(index, QItemSelectionModel.Select)
-
-                elif text_proj != '관리개발 (testShot)' and text_proj not in projLong_list:# and text_proj in currentProj_long_list:
-                    self.projSelection_model.select(index, QItemSelectionModel.Deselect)
-
-
-            # 샷리스트뷰 셋업이 끝난뒤 projLong_list 초기화
-            projLong_list = []
-
-
-        ####  차후 문제없으면 삭제예정
-        #####################################################################################################3
-        """
-
-
-
 
     def getProjs_Mem(self, taskInfoJson, memEN, deselectAll=None, unchecked=None, teamMember=None) :
-
 
         # 팀 트리뷰에서 체크된 멤버 리스트 읽어오기
         invisibleRoot = self.teamTreeModel.invisibleRootItem()
@@ -6461,10 +5210,7 @@ class DxManager(QMainWindow):
         checked_items_list = []
         self.get_CheckedItems(rootItem, checked_items_list)
 
-
         checkedList_EN = [member for member in list(self.memberCache_.keys()) for memKR in checked_items_list if self.memberCache_[member] == memKR]
-
-        #########################################
 
         today = QDate.currentDate()
         monday = today.addDays(-today.dayOfWeek()+1)
@@ -6476,18 +5222,10 @@ class DxManager(QMainWindow):
         day_count = 0
         date = lastWeek_monday
 
-        #selected_mem = []
         projs_currentMem = []
 
-        #if deselectAll == 1:
-        #    if teamMember:
-        #        if unchecked != 1 and memEN not in teamMember:
-
-
-        #if unchecked != 1:
         # 현재 멤버가 체크박스 on인경우 어싸인되어 있는 프로젝트들중 이번주 완료해야할 태스크가 있는 프로젝트들을 가져옴
         projs_currentMem = self.get_projs_currentMem(taskInfoJson, checkedList_EN)
-
         if memEN in taskInfoJson:
 
             df_taskInfo = pd.DataFrame(taskInfoJson[memEN])
@@ -6501,12 +5239,9 @@ class DxManager(QMainWindow):
             fri = mon + timedelta(days=4)
 
             df_thisWeek = df_taskInfo[(df_taskInfo["end_date"] >= mon) & (df_taskInfo["end_date"] <= fri)]
-
             thisWeek_proj_codes = df_thisWeek["project_code"].unique().tolist()
 
-
             projs=[]
-            #if unchecked != 1:
             if memEN in checkedList_EN:
                 projs = [proj for proj in self.projects for proj_code in thisWeek_proj_codes if self.projects[proj][0] == proj_code] 
 
@@ -6518,21 +5253,18 @@ class DxManager(QMainWindow):
             projLong_list = []
             # 이번주를 포함한 지난주 다음주 3주간의 스케쥴이 어싸인되어있는 프로젝트를 찾아 task_3w 에 저장
             tasks_3w = []
-
             if jsonData != []:
                 for data in jsonData:
                     data_date = QDate(data["year"], data["month"], data["day"])
                     if lastWeek_monday <= data_date <= nextWeek_friday and data['artist'] == memEN:
                         tasks_3w.append(data)
 
-            #################################################################
             for task_3w in tasks_3w:
                 if task_3w["tasks"]:
                     for proj in list(task_3w["tasks"][0].keys()):
                         if proj not in projs_currentMem:
                             projs_currentMem.append(proj)
 
-            
             for proj in projs_currentMem:                    
                 if proj in self.projects:
                     projLong_list.append(self.projects[proj][1])
@@ -6546,27 +5278,17 @@ class DxManager(QMainWindow):
                 index = proj_model.index(row, 0)
                 text_proj = proj_model.data(index)
 
-
                 if text_proj != '관리개발 (testShot)':# and text_proj in projLong_list:
-
-                    #if deselectAll == 1:
                     if text_proj not in projLong_list:
                         self.projSelection_model.select(index, QItemSelectionModel.Deselect)
-
                     else:
-                        #self.projSelection_model.select(index, QItemSelectionModel.Select)
-                        #if not self.projSelection_model.isSelected(index):
                         self.projSelection_model.select(index, QItemSelectionModel.Select)
-
-                        #else:
-                        #    self.reloadShotList()
 
             # 샷리스트뷰 셋업이 끝난뒤 projLong_list 초기화
             projLong_list = []
 
 
         elif memEN not in taskInfoJson:
-
             projLong_list = []
             currentProj_long_list = []
 
@@ -6576,7 +5298,6 @@ class DxManager(QMainWindow):
 
             if projs_currentMem:
                 self.currentProjs = [proj for proj in self.currentProjs if proj in projs_currentMem]
-
             else:
                 self.currentProjs = []
 
@@ -6593,13 +5314,8 @@ class DxManager(QMainWindow):
                 elif text_proj != '관리개발 (testShot)' and text_proj not in projLong_list:# and text_proj in currentProj_long_list:
                     self.projSelection_model.select(index, QItemSelectionModel.Deselect)
 
-
             # 샷리스트뷰 셋업이 끝난뒤 projLong_list 초기화
             projLong_list = []
-
-
-
-
 
 
 
@@ -6607,63 +5323,29 @@ class DxManager(QMainWindow):
     # 트리뷰의 멤버를 선택하면 프로젝트 리스트에 어싸인된 프로젝트들 자동으로 선택되게 하기
     def sel_assigned_proj(self, set="multi", index=None, items=None, teamMember=None, deselectAll=None):
 
-
-        #taskInfoJson = self.import_Json_Thread(currentPath+"/.task_info", userID+"_task_info.json")
         taskInfoJson = self.import_Json(currentPath+"/.task_info", userID+"_task_info.json")
 
-
         checkedItems = []
-
         if index != None and set=="single" and items > 1:
-
             memKR = self.teamTreeModel.data(index, Qt.DisplayRole)
             memEN = [mem for mem in self.memberCache_ if self.memberCache_[mem] == memKR]
-
             if memEN:
                 self.getProjs_Mem(taskInfoJson, memEN[0])
 
-
-
         elif index != None and set == "single" and items == 0 or items == 1:
-
             memKR = self.teamTreeModel.data(index, Qt.DisplayRole)
             memEN = [mem for mem in self.memberCache_ if self.memberCache_[mem] == memKR]
-
             if memEN:
                 self.getProjs_Mem(taskInfoJson, memEN[0])            
 
-
-
-
         elif index == None and set == "multi":
-
             self.getProjs_Mem_selAll(taskInfoJson)                    
-
-            """
-            for memEN in self.memberCache_:
-                num_Mem = len(list(self.memberCache_.keys()))
-                memKR = self.memberCache_[memEN]
-                item = self.find_item_by_text(memKR)
-
-                if Qt.Checked == item.checkState():
-                    self.getProjs_Mem_selAll(taskInfoJson, memEN)
-                    
-
-                elif Qt.Unchecked == item.checkState() and teamMember is not None:
-                    if memEN in teamMember:
-                        # deselectAll : deselect All 컨텍스트 메뉴 실행인경우를 확인
-                        # 1 : 현재 멤버가 언체크가 된 것인지 확인
-                        self.getProjs_Mem(taskInfoJson, memEN, deselectAll, 1, teamMember) 
-            """
-
 
 
     # 리스트뷰 뷰필터 stateChanged 시그널 연결시켜 체크박스를 키거나 끌때 리스트뷰에 바로 적용되도록 연결 
     def listView_filter(self, state):
-
         self.refereshListViews(0, jsonData)
         self.reloadShotList()
-
 
     # 샷리스트뷰와 스케쥴 리스트뷰 모두에 이번주 완료예정인 태스크만 보이도록 함(토글)
     def deadLine_filter(self):
@@ -6672,16 +5354,12 @@ class DxManager(QMainWindow):
             self.deadLine_flag = 0
             self.ui.deadlineButton.setStyleSheet("QPushButton { background-color: rgb(53,53,53); }")
 
-
         elif self.deadLine_flag == 0:
             self.deadLine_flag = 1
             self.ui.deadlineButton.setStyleSheet("QPushButton { background-color: rgb(90,0,0); }")
 
         self.refereshListViews(0, jsonData)
         self.reloadShotList()
-
-
-
 
 
 
@@ -6700,14 +5378,12 @@ class DxManager(QMainWindow):
                 if taskColor is not None:
                     if (taskColor.red() != 94 and taskColor.green() != 29 and  taskColor.blue() != 35) and self.deadLine_flag==1:
                         listView.setRowHidden(row, True)
-
                     elif (taskColor.red() != 94 and taskColor.green() != 29 and  taskColor.blue() != 35) and self.deadLine_flag==0:
                         listView.setRowHidden(row, False)
                 else:
                     # taskColor가 None인 경우 기본 동작 (데드라인 플래그에 따라 처리)
                     if self.deadLine_flag==0:
                         listView.setRowHidden(row, False)                
-
 
 
                 # 스테이터스 체크박스의 상태에 따른  온/오프
@@ -6752,34 +5428,18 @@ class DxManager(QMainWindow):
 
 
 
-
-
-
-    # 리스트뷰의 아이템들을 읽어오는 메서드
-    #def get_listviewItems(self, item, listviewItems): 
-
-    #    for row in range(item.rowCount()):
-    #        child_item = item.child(row)
-    #        self.get_listviewItems(child_item, listviewItems)
-
-
-
-
     # 아이템의 상태에 따라 백그라운드 색깔 설정
     def set_itemBackgroundColor(self, listview_Model, listView_date, listview=None):
 
         if listview is not None:
             frame = listview.parent()
             parent_widget = frame.parent()
-
             today = QDate.currentDate()
+
             if listView_date["year"] == today.year() and listView_date["month"] == today.month() and listView_date["day"] == today.day() :
                 parent_widget.setStyleSheet("background-color: #38613b;")
-
             else:
                 parent_widget.setStyleSheet("")
-
-
 
         if listview_Model.rowCount() != 0:
             taskInfoJson = self.import_Json(currentPath+"/.task_info", userID+"_task_info.json")
@@ -6789,7 +5449,6 @@ class DxManager(QMainWindow):
                 item = listview_Model.data(index, Qt.DisplayRole)
 
                 project = connect_shot_proj[item]
-
                 endDate_py = connect_shot_schedule[item][1]
 
                 if endDate_py: # 스케쥴 지정이 되어있는경우
@@ -6818,143 +5477,10 @@ class DxManager(QMainWindow):
                         color = QColor(0,0,0,0)                     
                         listview_Model.set_background_color(row, color)                    
 
-
                 else: # 스케쥴이 없는경우 색없음
                     color = QColor(0,0,0,0)                    
                     listview_Model.set_background_color(row, color)                    
 
-
-
-                    """
-                    if end == currentDate:
-                        #color = QColor(200,109,117)
-                        color = QColor(94,29,35)                    
-                        listview_Model.set_background_color(row, color)
-                    """
-
-
-
-
-
-
-
-
-    """
-    def convert_to_resultData_forMirror(self, tasks, members):
-
-        #selected_indexes = self.projListview.selectedIndexes()
-        #selectedItems = [index.data() for index in selected_indexes]
-
-        allProj = []
-        #for item in selectedItems:
-        #    for proj in self.projects:
-        #        if self.projects[proj][1] == item:
-        #            selectedProj.append(proj)
-
-
-        allProj = list(self.projects.keys())
-
-
-        taskInfo = {}
-        proj_member_shots={}
-
-        task_manday_list = []
-        task_manday_status_list = []
-
-        mirror_proj_task_dic = {}
-
-
-        for proj in allProj:
-
-            member_shot = {}
-
-            progressRate = 0
-            #task_manday_list = []
-            #task_manday_status_list = []
-            #taskTuple=()
-            grade="G"
-
-            for member in members:
-
-                taskInfoJson = self.import_Json_Thread(currentPath+"/.task_info", userID+"_task_info.json")
-
-                if member in list(taskInfoJson.keys()):
-                #if member in memberCache:
-                    taskInfo[member] = taskInfoJson[member]
-
-                elif member not in list(taskInfoJson.keys()):
-                #elif member not in memberCache: 
-                    taskInfo[member] = self.getTaskInfo(member)
-                    taskInfoJson[member] = taskInfo[member]
-                    self.export_Json(currentPath+"/.task_info", userID+"_task_info.json", taskInfoJson)
-                    #memberCache.append(member)
-
-                process = ""
-                for i in range(len(taskInfo[member])):
-
-                    projCode = taskInfo[member][i]["project_code"]
-                    if projCode == self.projects[proj.lower()][0]:
-                        task = taskInfo[member][i]["extra_code"]
-                        context = taskInfo[member][i]["context"]
-                        if  context.find('/') != -1:
-                            contextList = context.split('/')
-                            task = task + "/" + contextList[1]
-
-                        dep_process = taskInfo[member][i]["process"]
-                        if dep_process == "matchmove": dep = "MMV"
-                        elif dep_process == "animation": dep = "ANI"
-                        elif dep_process == "creature": dep = "RIG"
-
-                        if tasks:
-                            for task_dep in tasks:
-                                taskList = list(task_dep.keys())
-                                if (task in taskList) and (task_dep[task] == dep):
-                                    #context = taskInfo[member][i]["context"]
-                                    #if  context.find('/') != -1:
-                                    #    contextList = context.split('/')
-                                    #    task = task + "/" + contextList[1]
-
-                                    process = taskInfo[member][i]["process"]
-                                    bd_manday = (taskInfo[member][i]["bid_manday"])
-                                    act_manday = taskInfo[member][i]["active_manday"]
-                                    status = taskInfo[member][i]["status"]
-
-                                    if act_manday == None or bd_manday == None:
-                                        progressRate = 0
-
-                                    elif float(act_manday) == 0 or float(bd_manday) ==0:
-                                        progressRate = 0
-
-                                    elif float(bd_manday) != 0 and float(act_manday) != 0:
-                                        progressRate = round((float(act_manday) / float(bd_manday))*100, 2)
-
-                                    if progressRate > 100:
-                                        progressRate = 100                            
-
-
-                                    # 파트 지정
-                                    if process == "matchmove":
-                                        department = "M"
-
-                                    elif process == "animation":
-                                        department = "A"
-
-                                    elif process == "creature":
-                                        department = "R"
-
-
-                                    task_manday_status = [grade, task, progressRate, status, department]
-                                    task_manday_status_list.append(task_manday_status)
-
-            if task_manday_status_list != []:
-                mirror_proj_task_dic[proj] = task_manday_status_list
-
-
-
-        if task_manday_status_list:
-            return task_manday_status_list, mirror_proj_task_dic
-
-    """
 
 
 
@@ -6972,10 +5498,8 @@ class DxManager(QMainWindow):
         bidEdit_json = self.import_Json(currentPath+"/.temp_BDmanday", "edited_mandayData.json")
 
         for proj in allProj:
-
             member_shot = {}
             progressRate = 0
-            #grade="G"
 
             for member in members:
 
@@ -7017,7 +5541,6 @@ class DxManager(QMainWindow):
                                         act_manday = taskInfo[member][i]["active_manday"]
                                         status = taskInfo[member][i]["status"]
 
-
                                         if bd_manday == None:
                                             bd_manday = "None"
 
@@ -7025,21 +5548,6 @@ class DxManager(QMainWindow):
                                             act_manday = "None"
 
                                         progressRate = str(act_manday) + "/" + str(bd_manday)
-
-
-                                        """
-                                        if act_manday == None or bd_manday == None:
-                                            progressRate = 0
-
-                                        elif float(act_manday) == 0 or float(bd_manday) ==0:
-                                            progressRate = 0
-
-                                        elif float(bd_manday) != 0 and float(act_manday) != 0:
-                                            progressRate = round((float(act_manday) / float(bd_manday))*100, 2)
-
-                                        if progressRate > 100:
-                                            progressRate = 100                            
-                                        """
 
                                         # 파트 지정
                                         if process == "matchmove":
@@ -7050,7 +5558,6 @@ class DxManager(QMainWindow):
 
                                         elif process == "creature":
                                             department = "R"
-
 
                                         task_manday_status = [proj.upper(), task, progressRate, status, department]
 
@@ -7066,12 +5573,9 @@ class DxManager(QMainWindow):
                                             mirror_proj_task_dic[proj].append(task_manday_status)
 
 
-
         if task_manday_status_list:
-
             # 맨데이가 수정된 경우 미러데이터에 이를 업데이트하기
             for proj in mirror_proj_task_dic:
-                
                 update_tasks = []
                 for task in mirror_proj_task_dic[proj]:
                     for edit_task in bidEdit_json:
@@ -7082,10 +5586,7 @@ class DxManager(QMainWindow):
                             task[2] = manday
                             update_tasks.append(task)
 
-
             return task_manday_status_list, mirror_proj_task_dic
-
-
 
 
 
@@ -7093,19 +5594,8 @@ class DxManager(QMainWindow):
 
     def convert_to_tuple(self, tasks, members):
 
-        #print (tasks)
-
-        #mirrorDataList = self.import_Json(currentPath+"/.scheduleData_mirror", userID+"_MirrorData_list.json")
         mirrorData = self.import_Json(currentPath+"/.scheduleData_mirror", userID+"_scheduleMirror.json")
-
-        selected_indexes = self.projListview.selectedIndexes()
-        selectedItems = [index.data() for index in selected_indexes]
-
-        selectedProj = []
-        for item in selectedItems:
-            for proj in self.projects:
-                if self.projects[proj][1] == item:
-                    selectedProj.append(proj)
+        selectedProj = self.get_selected_projects()
 
         taskInfo = {}
         proj_member_shots={}
@@ -7121,30 +5611,20 @@ class DxManager(QMainWindow):
 
 
         for sel_proj in selectedProj:
-
             member_shot = {}
             progressRate = 0
             taskTuple=()
             grade="G"
 
+            taskInfo = self.get_cached_task_info(members, taskInfoJson)
+
             for member in members:
-
-                if member in list(taskInfoJson.keys()):
-                    taskInfo[member] = taskInfoJson[member]
-
-                elif member not in list(taskInfoJson.keys()):
-                    taskInfo[member] = self.getTaskInfo(member)
-                    taskInfoJson[member] = taskInfo[member]
-                    self.export_Json(currentPath+"/.task_info", userID+"_task_info.json", taskInfoJson)
-
-
                 process = ""
                 for i in range(len(taskInfo[member])):
                     task = taskInfo[member][i]["extra_code"]
                     context = taskInfo[member][i]["context"]
                     if  context.find('/') != -1:
                         contextList = context.split('/')
-                        #task = task + "/" + contextList[1]
 
                         numContext=contextList.count("/")
 
@@ -7155,7 +5635,6 @@ class DxManager(QMainWindow):
 
                         task=task+full_context
 
-
                     dep_process = taskInfo[member][i]["process"]
                     if dep_process == "matchmove": dep = "MMV"
                     elif dep_process == "animation": dep = "ANI"
@@ -7163,29 +5642,12 @@ class DxManager(QMainWindow):
 
                     projCode = taskInfo[member][i]["project_code"]
 
-                    #print ("##")
-                    #print (projCode)
-                    #print (self.projects[sel_proj.lower()][0])
-                    #print ("##")
-
                     if projCode == self.projects[sel_proj.lower()][0]:
                         if tasks:
                             for task_dep in tasks:
-
-                                #print ("aaaaa")
-
                                 taskList = list(task_dep.keys())
-
-                                #print ("##")
-                                #print (task_dep)
-                                #print (task)
-                                #print (task_dep[task][1])
-                                #print (dep)
-                                #print (task_dep[task][0])
-                                #print (sel_proj.lower())
 
                                 if (task in taskList) and (task_dep[task][1] == dep) and (task_dep[task][0] == sel_proj.lower()):
-
                                     process = taskInfo[member][i]["process"]
                                     bd_manday = (taskInfo[member][i]["bid_manday"])
                                     act_manday = taskInfo[member][i]["active_manday"]
@@ -7209,128 +5671,13 @@ class DxManager(QMainWindow):
                                     elif process == "creature":
                                         department = "R"
 
-                                    #task_manday_status = (grade, task, progressRate, status, department)
-                                    task_manday_status = (sel_proj.upper(), task, progressRate, status, department)
-
-
-                                    task_manday_status_list.append(task_manday_status)
-
-        #print (task_manday_status_list)
-
-        if task_manday_status_list:
-            task_manday_status_list = self.convert_mandayEditList(task_manday_status_list)
-            return task_manday_status_list
-
-
-
-
-
-
-
-
-
-
-
-    """
-    def convert_to_tuple(self, tasks, members):
-
-
-        #mirrorDataList = self.import_Json(currentPath+"/.scheduleData_mirror", userID+"_MirrorData_list.json")
-        mirrorData = self.import_Json(currentPath+"/.scheduleData_mirror", userID+"_scheduleMirror.json")
-
-        selected_indexes = self.projListview.selectedIndexes()
-        selectedItems = [index.data() for index in selected_indexes]
-
-        selectedProj = []
-        for item in selectedItems:
-            for proj in self.projects:
-                if self.projects[proj][1] == item:
-                    selectedProj.append(proj)
-
-
-        taskInfo = {}
-        proj_member_shots={}
-
-        task_manday_list = []
-        task_manday_status_list = []
-
-        task_manday_list__ = []
-        task_manday_status_list__ = []
-
-        userTaskInfo_path = currentPath+"/.task_info/" + userID +"_task_info.json"
-        taskInfoJson = self.import_Json(currentPath+"/.task_info", userID+"_task_info.json")
-
-
-        for sel_proj in selectedProj:
-
-            member_shot = {}
-            progressRate = 0
-            taskTuple=()
-            grade="G"
-
-            for member in members:
-
-                if member in list(taskInfoJson.keys()):
-                    taskInfo[member] = taskInfoJson[member]
-
-                elif member not in list(taskInfoJson.keys()):
-                    taskInfo[member] = self.getTaskInfo(member)
-                    taskInfoJson[member] = taskInfo[member]
-                    self.export_Json(currentPath+"/.task_info", userID+"_task_info.json", taskInfoJson)
-
-
-                process = ""
-                for i in range(len(taskInfo[member])):
-                    task = taskInfo[member][i]["extra_code"]
-                    context = taskInfo[member][i]["context"]
-                    if  context.find('/') != -1:
-                        contextList = context.split('/')
-                        task = task + "/" + contextList[1]
-
-                    dep_process = taskInfo[member][i]["process"]
-                    if dep_process == "matchmove": dep = "MMV"
-                    elif dep_process == "animation": dep = "ANI"
-                    elif dep_process == "creature": dep = "RIG"
-
-                    projCode = taskInfo[member][i]["project_code"]
-                    if projCode == self.projects[sel_proj.lower()][0]:
-
-                        if tasks:
-                            for task_dep in tasks:
-                                taskList = list(task_dep.keys())
-                                if (task in taskList) and (task_dep[task] == dep):
-
-                                    process = taskInfo[member][i]["process"]
-                                    bd_manday = (taskInfo[member][i]["bid_manday"])
-                                    act_manday = taskInfo[member][i]["active_manday"]
-                                    status = taskInfo[member][i]["status"]
-
-                                    if bd_manday == None:
-                                        bd_manday = "None"
-
-                                    if act_manday == None:
-                                        act_manday = "None"
-
-                                    progressRate = str(act_manday) + "/" + str(bd_manday)
-
-                                    # 파트 지정
-                                    if process == "matchmove":
-                                        department = "M"
-
-                                    elif process == "animation":
-                                        department = "A"
-
-                                    elif process == "creature":
-                                        department = "R"
-
-                                    #task_manday_status = (grade, task, progressRate, status, department)
                                     task_manday_status = (sel_proj.upper(), task, progressRate, status, department)
                                     task_manday_status_list.append(task_manday_status)
 
         if task_manday_status_list:
             task_manday_status_list = self.convert_mandayEditList(task_manday_status_list)
             return task_manday_status_list
-    """
+
 
                     # 지난 프로젝트를 선택해서 리스트를 표시하는 기능을 사용하게 되면 쓰게될 부분 - 삭제하지 말것
     """
@@ -7355,64 +5702,34 @@ class DxManager(QMainWindow):
 
 
 
-
-
-
-
-
-
-
-
-
     def getCurrentListViewDate(self, shiftDays):
-
-
-        #numberListView = self.day_listViewLayout.count()
         numberListView = self.dayUi.splitter.count()
-
 
         listView_labels = []
         for i in range(numberListView):
-
             addNum = shiftDays + (-1*((numberListView-1) - i))
             listViewDate = self.rangeEndDate.addDays(addNum)
-            
             date = {"year":listViewDate.year() , "month":listViewDate.month(), "day":listViewDate.day()}
-
             listView_labels.append(date)
 
-
         return listView_labels
-
-
-
 
 
     # 한번도 스케쥴 데이터가 생성된적이 없는경우 초기 제이슨파일 생성
     def makeInit_data(self, path, userID):
 
-        # 현재사용자의 태스크데이타 초기화 제이슨파일 생성.
-        #if userID not in self.memberCache_:
-        #    memberCache.append(userID)
-
         taskInfo = {}
         taskInfo[userID] = self.getTaskInfo(userID)
-
 
         # 현재사용자의 한글이름을 가져오기 위해 유저정보에 가져오기
         userInfoJsonPath = path + "/.user_Info"
         userInfo = self.import_Json(userInfoJsonPath, userID+"_userInfo.json")
 
-        # self.memberCache_전역변수에 현재 유저의 한글/영문이름 짝지어 저장
-        #userNameKr = userInfo[0]["name_kr"]
-        #if userID not in self.memberCache_:
-        #    self.memberCache_[userID] = userNameKr
-
         taskJsonPath = path + "/.task_info"
         self.export_Json(taskJsonPath, userID+"_task_info.json", taskInfo)
 
         # 초기 스케쥴 데이타 생성
-        existingData = jsonData#self.getScheduleJsonData()
+        existingData = jsonData
         currentYear = ""
         currentMonth = ""
         currentDay = ""
@@ -7426,150 +5743,36 @@ class DxManager(QMainWindow):
             currentDay = self.comboDay.currentText()
             currentYear = self.comboYear.currentText()    
 
-        """
-        #######################################################################################
-        # 처음 ui를  켰을때 현재 등록시킨 스케쥴을 표시하게 하기위해 현재기준 앞뒤 한주씩의 기간 설정
-        today = QDate.currentDate()
-        monday = today.addDays(-today.dayOfWeek()+1)
-        friday = monday.addDays(4) 
-        lastWeek_monday = today.addDays(-7+(-today.dayOfWeek()+1))
-        nextWeek_friday = today.addDays(11+(-today.dayOfWeek()+1))
-
-        betweenDate = {}
-        day_count = 0
-        date = lastWeek_monday
-
-
-        if jsonData != []:
-            json_df = pd.DataFrame(jsonData) # jsonData 파일을 판다스 데이타프레임으로 변환
-            artist_df = json_df.set_index('artist') # artist 열을 인덱스로 가지는 데이타프레임으로 변환
-            user_df = artist_df.loc[artist_df.index == userID] # 아티스트 데이타프레임에서 현재 사용자의 데이타만 뽑은 데이타프레임으로 변환
-
-            ########################################################################################
-            # 지난주 월요일부터 다음주 금요일까지의 어싸인된 스케쥴을 확인후 해당 프로젝트만 선택되게 하기
-        
-            #오늘날짜 기준 지난주 월요일부터 다음주 금요일까지의 기간의 데이타프레임 제작
-            dates = []
-            while date <= nextWeek_friday:
-                dateList = {}
-
-                dateList["year"] = date.year()
-                dateList["month"] = date.month()
-                dateList["day"] = date.day()                        
-
-                if dateList not in dates:
-                    dates.append(dateList)
-
-                date = date.addDays(1)
-
-            betweenDate_df = pd.DataFrame(dates)
-
-
-
-            columns_compare = ["year", "month", "day"] # 현재유저의 스케쥴어싸인 데이타프레임과 3주간의 날짜를 비교하여 일치하는것을 찾기위해 비교할 날짜 컬럼 리스트
-
-            mask1 = betweenDate_df[columns_compare].apply(tuple, axis=1)
-            mask2 = user_df[columns_compare].apply(tuple, axis=1)
-            commonValues = set(mask1).intersection(set(mask2)) # 두마스크의 일치되는 것만 뽑아낸 set
-
-            recentWork_df = user_df[mask2.isin(commonValues)] # 일치하는 날짜에 해당하는 스케쥴어싸인 데이타프레임
-
-
-            userTasks = recentWork_df['tasks'] # task컬럼만 시리즈로 추출
-
-            # jsonData 안의 현재 유저의 스케쥴 데이타들중 task부분만 추출하여 set연산자를 통해 현재 진행중인 프로젝트 이름만 추출
-            projects = set()
-            for task in userTasks: # 시리즈안의 프로젝트만 set 연산자를 통해 뽑아냄
-                proj = set(task[0])
-                projects = projects | proj
-
-            # 추출된 프로젝트이름(코드)를 ui상 표시된 이름으로 변환하여 리스트에 저장
-            projLong_list = []
-            for projCode in projects:
-                projName = self.projects[projCode][1]
-                if projName not in projLong_list:
-                    projLong_list.append(projName)
-
-
-            # 뽑아낸 프로젝트 이름을 이용하여 UI상의 프로젝트 리스트뷰에서 해당 프로젝트를 선택
-            proj_model = self.projListview.model()
-            for row in range(proj_model.rowCount()):
-                index = proj_model.index(row, 0)
-                text_proj = proj_model.data(index)
-                if text_proj in projLong_list:
-                    self.projSelection_model.select(index, QItemSelectionModel.Select)
-
-
-        today = QDate.currentDate()
-
-        numListview = self.listViewNumLineEdit.text()
-
-        for i in range(int(numListview)):
-            layout = self.day_listViewLayout.itemAt(i)
-
-            if layout:
-                frame = layout.itemAt(2).widget()
-                dateIndex = layout.itemAt(0).widget()
-
-                date = dateIndex.text()
-                dateSplit = date.split(" (")
-
-                month = str(today.month())
-                day = str(today.day())
-
-                todayString = month + "/" + day
-
-                if dateSplit[0] == todayString:
-                    self.manager.set_active_container(frame, layout, False)
-        """
 
 
 
     def changeComboDate(self):
 
-        #global rangeEndDate
         numListview = self.listViewNumLineEdit.text()
-
         newEndMonth = self.comboMonth.currentText()
         newEndDay = self.comboDay.currentText()
         newEndYear = self.comboYear.currentText()
 
         newEndDate = QDate(int(newEndYear), int(newEndMonth), int(newEndDay))
-        
         diffrenceDays = self.rangeEndDate.daysTo(newEndDate)
-
 
         self.updateJson(diffrenceDays)
         self.setListviewDate(newEndDate, numListview)
-
         self.rangeEndDate = newEndDate
-
 
         layouts = []
         for i in range(int(numListview)):
             widget = self.dayUi.splitter.widget(i)
             layout = widget.layout()
 
-            #layout = self.day_listViewLayout.itemAt(i)
             layouts.append(layout)
 
             if layout:
-                #dateIndex = layout.itemAt(0).widget()
-                #date = dateIndex.text()
-                #dates.append(date)
-
                 frame = layout.itemAt(2).widget()
                 frameLayout = frame.layout()
                 listView = frameLayout.itemAt(0).widget()
-                #listViews.append(listView)
 
                 self.manager.Move_sideway_setContainer(frame, layout)
-
-
-
-
-
-
 
 
 
@@ -7581,8 +5784,6 @@ class DxManager(QMainWindow):
         currentDay = self.comboDay.currentText()
         currentYear = self.comboYear.currentText()        
 
-        #month = (QDate(int(currentYear), int(currentMonth), int(currentDay)).addDays(numDay)).month()
-        #day = (QDate(int(currentYear), int(currentMonth), int(currentDay)).addDays(numDay)).day()        
         weekDay = {1:'Mon', 2:'Tue', 3:'Wed', 4:'Thu', 5:'Fri', 6:'Sat', 7:'Sun'}
         currentDate = QDate(int(currentYear), int(currentMonth), int(currentDay))
 
@@ -7591,7 +5792,6 @@ class DxManager(QMainWindow):
             month = (QDate(int(currentYear), int(currentMonth), int(currentDay)).addDays(i-2)).month()
             day = (QDate(int(currentYear), int(currentMonth), int(currentDay)).addDays(i-2)).day()            
             dow = (QDate(int(currentYear), int(currentMonth), int(currentDay)).addDays(i-2)).dayOfWeek()
-            #date = str(month) + "." + str(day) 
             date = str(month) + "."+str(day) + "  ("+weekDay[dow]+")"
             dateList.append(date)
 
@@ -7604,8 +5804,6 @@ class DxManager(QMainWindow):
 
     def setListviewDate(self, setDate, numListview):
 
-        #global rangeEndDate
-
         dateList=[]
         for i in range(int(numListview)):
             addNum = int(numListview)-(i+1)
@@ -7615,7 +5813,6 @@ class DxManager(QMainWindow):
 
         # set date label
         for i in range(int(numListview)):
-            #layout = self.day_listViewLayout.itemAt(i)
 
             widget = self.dayUi.splitter.widget(i)
             layout = widget.layout()
@@ -7646,68 +5843,22 @@ class DxManager(QMainWindow):
         
 
 
-
-
     def forwardDay(self):
-
         forwardDate = self.move_sideways(1, jsonData)
-        #self.move_sideways_df(1, jsonData)
-        #self.updateJson(1)
-
-
-        # 기존 전역변수 선언
-        #global rangeEndDate
-
-        #num_currentListView = self.day_listViewLayout.count()
-
-        #forwardDate = QDate(rangeEndDate.addDays(1))
-
-        #self.setListviewDate(forwardDate, num_currentListView)
-        #self.comboDay.setCurrentText(str(forwardDate.day()))
-        #self.comboMonth.setCurrentText(str(forwardDate.month()))        
-        #self.comboYear.setCurrentText(str(forwardDate.year()))
-
         self.rangeEndDate = forwardDate # 전역변수 업데이트
 
 
 
-
-        
     def backwardDay(self):
-
         # 리스트뷰를 한칸 옮기기전 현재데이타 저장.
         backwardDate = self.move_sideways(-1, jsonData)
-
-        #self.updateJson(-1)
-
-        # 기존 전역변수 선언
-        #global rangeEndDate
-
-        #num_currentListView = self.day_listViewLayout.count()
-
-        #backwardDate = QDate(rangeEndDate.addDays(-1))
-
-        #self.setListviewDate(backwardDate, num_currentListView)
-        #self.comboDay.setCurrentText(str(backwardDate.day()))
-        #self.comboMonth.setCurrentText(str(backwardDate.month()))        
-        #self.comboYear.setCurrentText(str(backwardDate.year()))
-
         self.rangeEndDate = backwardDate # 전역변수 업데이트
-
-
 
 
 
     def setDate(self):
 
-        #calendar = self.ui.calendarWidget
-        #date = calendar.selectedDate()
-        #year = date.year()
-        #month = date.month()
-        #day = date.day()
-
         currentDate = QDate.currentDate()
-
         year = currentDate.year()
         month = currentDate.month()
         day = currentDate.day()
@@ -7726,19 +5877,15 @@ class DxManager(QMainWindow):
 
 
 
-
-
     # 트리뷰 루트아이템 이하 모든 아이템을 리스트에 저장하는 재귀함수   
     def getAllItem_treeView(self, item, allItems):
 
         allItems.append(item.text())
-
         for row in range(item.rowCount()):
             child_item = item.child(row)
             self.getAllItem_treeView(child_item, allItems)
 
         return allItems
-
 
 
 
@@ -7754,8 +5901,6 @@ class DxManager(QMainWindow):
 
 
 
-
-
     # 트리뷰를 새로고침하기전 저장한 체크박스 on되어있는 리스트변수를 참조하여 새로고침후 다시 원래대로 체크박스 on
     def set_CheckItems(self, item, checkedItems):
 
@@ -7768,34 +5913,27 @@ class DxManager(QMainWindow):
 
 
 
-
     # 멤버트리뷰의 각 멤버의 체크박스를 온오프에 작동하는 메서드
     def clickedAction_memberCheck(self, index): 
 
         itemChecked = self.teamTreeModel.data(index, Qt.CheckStateRole)
-
         invisibleRoot = self.teamTreeModel.invisibleRootItem()
         rootItem = invisibleRoot.child(0)
 
-
         checked_items_list = []
         self.get_CheckedItems(rootItem, checked_items_list)                             # 트리뷰를 새로고침 하기전 체크되어있는 상태의 아이템리스트 가져오기
-
         self.teamInfo = self.edit_teamTree_item(self.teamTreeModel.invisibleRootItem()) # 새로 추가되거나 삭제된 멤버에 대한 체크박스상태를 반영하기 위해서 새로고침
         self.set_CheckItems(rootItem, checked_items_list)                               # 트리뷰를 새로고침한후 원래대로 체크박스 체크해주기          
-
 
         # 프로젝트 자동선택이 꺼져있고, 트리뷰 컨택스트 메뉴실행이 아닌경우
         if self.ui.sel_allProj_checkBox.checkState() == Qt.Unchecked and self.select_ctxMenu == 0:
             self.reloadShotList()
-
 
         # 프로젝트 자동선택이 켜져있고있고, 트리뷰 컨택스트 메뉴실행이 아닌상태이고, 싱글 멤버 선택인 경우
         elif self.ui.sel_allProj_checkBox.checkState() == Qt.Checked and self.select_ctxMenu == 0: # and len(checked_items_list) == 1 or len(checked_items_list) == 0:
             self.reloadShotList()
             items = len(checked_items_list)
             self.sel_assigned_proj("single", index, items)
-
 
 
 
@@ -7818,29 +5956,6 @@ class DxManager(QMainWindow):
 
 
 
-    '''
-    def getTeamInfo(self): # 제이슨으로 저장된 팀멤버 정보를 읽어옴
-
-        teamInfoPath = currentPath + "/.team_Info"
-        teamInfoJson = os.path.join(teamInfoPath, userID+"_teamInfo.json")
-
-        teamInfoData = []
-        if (os.path.exists(teamInfoJson)):
-            with open(teamInfoJson) as f:
-                teamInfoData = json.load(f)
-        
-        return teamInfoData
-    '''
-
-
-
-
-
-
-
-
-
-
 
     def edit_teamTree_item(self, parent_root):
 
@@ -7848,7 +5963,6 @@ class DxManager(QMainWindow):
 
         # 현재유저의 팀원정보 가져오기
         teamInfoData = self.getTeamInfo(userID)
-
 
         if userID not in self.memberCache_:
             self.memberCache_[userID] = self.currName_kr
@@ -7862,7 +5976,6 @@ class DxManager(QMainWindow):
             if mem not in self.memberCache_:
                 self.memberCache_[mem] = teamInfoData[0][mem]["nameKr"]
 
-
         del_mem = []
         for mem in self.memberCache_:
             if mem not in existMember_inJson:
@@ -7872,13 +5985,11 @@ class DxManager(QMainWindow):
             if mem != userID and mem in self.memberCache_:
                 del self.memberCache_[mem]
 
-
         invisibleRoot = self.teamTreeModel.invisibleRootItem()
         rootItem = invisibleRoot.child(0)
 
         checked_items_list = []
         unchecked_items_list = []
-
 
         new_hierarchy = self.get_treeAll_items(rootItem, checked_items_list, unchecked_items_list, existMember_inJson, teamTreeHierarchy, 0)
 
@@ -7891,33 +6002,16 @@ class DxManager(QMainWindow):
 
         all_treeMemberList = list(set(checked_items_list + unchecked_items_list))
 
-
-        # 업데이트된 데이타를 기반으로 다시 트리구조 구성하기위해 기존 하위 트리구조 삭제
-
-        """
-        for i in range(self.teamLeader.rowCount()):
-            #item = self.teamLeader.child(0,0)
-            #if item:
-            #    print (item.text())
-            self.teamLeader.removeRow(0)
-        """
         memberList = []
         self.print_all_items(memberList, None)
 
-
-
-
         if teamInfoData != []:
-
             child_Members = []
             child_teamInfo = []
             allTeamInfos = [{}]
-            #userMembersKr = []
 
             for member in teamInfoData[0]:
-
                 self.checkUserInfo(member) # member의 정보가 user_info 폴더에 json파일이 있는지 확인후 없으면 json 파일 생성
-
                 memberNameKr = teamInfoData[0][member]['nameKr']
 
                 # 중복되는 멤버가 있다면 doubledMem 에 저장
@@ -7930,34 +6024,17 @@ class DxManager(QMainWindow):
                 memberItem = QStandardItem(memberNameKr)
                 memberItem.setCheckable(True)
 
-                #userMembersKr.append(memberNameKr)
-
                 if member not in list(self.memberCache_.keys()):
                     self.memberCache_[member] = memberNameKr
 
                 if memberNameKr in checked_items_list:
                     memberItem.setCheckState(Qt.Checked)
 
-
-                """
-                # 하이라키 구조를 나타내는 전역변수(teamTreeHierarchy)에 현재유저의 팀원(2단계) 리스트를 확인하여 존재하면 트리뷰에 해당 팀원을 표시
-                valueNum = 0
-                for hi in list(teamTreeHierarchy.keys()):
-                    if hi>2:
-                        num = teamTreeHierarchy[hi].count(memberNameKr) # 하위 하이라키구조에서 중복되는 멤버를 찾아 더해서 총 중복갯수를 만들기
-                        valueNum = valueNum+num
-
-                if valueNum == 0: # 하이라키구조에서 하위멤버들중 중복되는것이 없이 0개여야 항목을 표시되게 함.
-                    self.teamLeader.appendRow(memberItem)
-                """
-                
-
                 if memberNameKr not in memberList:
                     self.teamLeader.appendRow(memberItem)
 
                 if memberNameKr not in all_treeMemberList:
                     all_treeMemberList.append(memberNameKr)
-
 
                 #### 팀원의 삭제로 변화가 생긴 정보를 all_treeMemberList에 반영하기 위해 cacheMember_ 변수를 확인하여 바뀐정보를 반영함
                 del_members = []
@@ -7968,8 +6045,6 @@ class DxManager(QMainWindow):
                 for del_mem in del_members:
                     if del_mem != self.currName_kr:
                         all_treeMemberList.remove(del_mem)
-                ##################################################################################################################
-
 
                 # 최상위 리더의 바로 아래 리더들의 하위 멤버들중, 중복되는 멤버가 있을경우 최상위 리더의 중복멤버는 트리뷰에서 삭제
                 # (중복되면 체크박스가 정상적으로 작동하지 않음)
@@ -7989,15 +6064,10 @@ class DxManager(QMainWindow):
                 for row in reversed(rows_to_delete):
                     self.teamLeader.removeRow(row)
 
-
-
-
                 # 각 리더의 하위 팀원들을 팀트리뷰에 추가함
                 members, teamInfos = self.get_teamInfo_member(member, memberItem, all_treeMemberList, checked_items_list, existMember_inJson, allTeamInfos, 2)
-
                 child_Members = members + child_Members
                 child_teamInfo = allTeamInfos + child_teamInfo
-
 
 
             if child_Members != None: # 팀원중에 리더가 있어서 차일드로 팀원들을 가지고 있는경우
@@ -8009,6 +6079,7 @@ class DxManager(QMainWindow):
                         if info not in teamInfoData[0]:
                             teamInfoData[0][info] = child_teamInfo[0][info]
 
+                #< 삭제금지 >
                 #print ("## 아래 세가지 데이터가 일치해야함")
                 #print (all_treeMemberList) #현재 트리뷰 ui상의 멤버리스트
                 #print (existMember_inJson) # 현재 유저의 외부 teamInfo.json 상의 팀원리스트
@@ -8016,11 +6087,9 @@ class DxManager(QMainWindow):
                 #print ("##")
 
             self.teamTree.expandAll()
-
             teamInfo_ = teamInfoData
 
             return teamInfoData
-
 
 
     # 트리뷰 모델내에 있는 아이템을 모두 출력하는 테스트 메서드
@@ -8038,165 +6107,28 @@ class DxManager(QMainWindow):
 
 
 
-
-
-    """
-    def edit_teamTree_item_test(self, parent_root):
-
-        # 현재유저의 팀원정보 가져오기
-        teamInfoData = self.getTeamInfo(userID)
-
-        if userID not in self.memberCache_:
-            self.memberCache_[userID] = self.currName_kr
-
-
-        if teamInfoData != []:
-            existMember_inJson = list(teamInfoData[0].keys())
-        else:
-            existMember_inJson = []            
-
-
-        for mem in existMember_inJson:
-            if mem not in self.memberCache_:
-                self.memberCache_[mem] = teamInfoData[0][mem]["nameKr"]
-
-        del_mem = []
-        for mem in self.memberCache_:
-            if mem not in existMember_inJson:
-                del_mem.append(mem)
-        #        del self.memberCache_[mem]
-
-        for mem in del_mem:
-            if mem != userID and mem in self.memberCache_:
-                del self.memberCache_[mem]
-
-        invisibleRoot = self.teamTreeModel.invisibleRootItem()
-        rootItem = invisibleRoot.child(0)
-
-        checked_items_list = []
-        unchecked_items_list = []
-
-        self.get_treeAll_items(rootItem, checked_items_list, unchecked_items_list, existMember_inJson, teamTreeHierarchy, 0)
-        all_treeMemberList = list(set(checked_items_list + unchecked_items_list))
-
-
-
-
-        # 업데이트된 데이타를 기반으로 다시 트리구조 구성하기위해 기존 하위 트리구조 삭제
-        for i in range(self.teamLeader.rowCount()):
-            self.teamLeader.removeRow(0)
-
-        if teamInfoData != []:
-
-            child_Members = []
-            child_teamInfo = []
-            allTeamInfos = [{}]
-
-            for member in teamInfoData[0]:
-
-                self.checkUserInfo(member) # member의 정보가 user_info 폴더에 json파일이 있는지 확인후 없으면 json 파일 생성
-
-                memberNameKr = teamInfoData[0][member]['nameKr']
-                memberItem = QStandardItem(memberNameKr)
-                memberItem.setCheckable(True)
-
-                if member not in list(self.memberCache_.keys()):
-                #if member not in memberCache:
-                    #memberCache.append(member)
-                    self.memberCache_[member] = memberNameKr
-
-                if memberNameKr in checked_items_list:
-                    memberItem.setCheckState(Qt.Checked)
-
-                
-                # 하이라키 구조를 나타내는 전역변수(teamTreeHierarchy)에 현재유저의 팀원(2단계) 리스트를 확인하여 존재하면 트리뷰에 해당 팀원을 표시
-                valueNum = 0
-                for hi in list(teamTreeHierarchy.keys()):
-                    if hi>2:
-                        num = teamTreeHierarchy[hi].count(memberNameKr) # 하위 하이라키구조에서 중복되는 멤버를 찾아 더해서 총 중복갯수를 만들기
-                        valueNum = valueNum+num
-              
-                if valueNum == 0: # 하이라키구조에서 하위멤버들중 중복되는것이 없이 0개여야 항목을 표시되게 함.
-                    self.teamLeader.appendRow(memberItem)
-
-
-                if memberNameKr not in all_treeMemberList:
-                    all_treeMemberList.append(memberNameKr)
-
-                #### 팀원의 삭제로 변화가 생긴 정보를 all_treeMemberList에 반영하기 위해 cacheMember_ 변수를 확인하여 바뀐정보를 반영함
-                del_members = []
-                for mem in all_treeMemberList:
-                    if mem not in list(self.memberCache_.values()):
-                        del_members.append(mem)
-
-                for del_mem in del_members:
-                    if del_mem != self.currName_kr:
-                        all_treeMemberList.remove(del_mem)
-                ##################################################################################################################
-
-
-
-                members, teamInfos = self.get_teamInfo_member(member, memberItem, all_treeMemberList, checked_items_list, existMember_inJson, allTeamInfos, 2)
-
-                child_Members = members + child_Members
-                child_teamInfo = allTeamInfos + child_teamInfo
-
-            
-
-            if child_Members != None: # 팀원중에 리더가 있어서 차일드로 팀원들을 가지고 있는경우
-                all_treeMemberList = list(set(all_treeMemberList + child_Members))
-
-                if child_teamInfo != []:
-                    for info in child_teamInfo[0]:
-
-                        if info not in teamInfoData[0]:
-                            teamInfoData[0][info] = child_teamInfo[0][info]
-
-                #print ("## 아래 세가지 데이터가 일치해야함")
-                #print (all_treeMemberList) #현재 트리뷰 ui상의 멤버리스트
-                #print (existMember_inJson) # 현재 유저의 외부 teamInfo.json 상의 팀원리스트
-                #print (self.memberCache_)       # 현재상태의 전체 팀원의 리스트를 담고있는 전역변수
-                #print ("##")
-
-            self.teamTree.expandAll()
-            return teamInfoData
-    """
-
-
-
     # 재귀함수(하위 팀원중 리더인 팀원의 팀원들까지 읽어오기 위한 재귀함수)
     def get_teamInfo_member(self, teamMember, teamMemberItem, all_treeMemList, checkedItems, existMem, allInfos, hi):
 
-
         hi = hi+1
-
         added_memberList = []
-
         member_teamInfo = self.getTeamInfo(teamMember)
         if member_teamInfo != []:
             for info_member in list(member_teamInfo[0].keys()):
                 allInfos[0][info_member] = member_teamInfo[0][info_member]
 
-
         if member_teamInfo != []:
             for member in member_teamInfo[0]:
-
                 if member != userID:
-
                     self.checkUserInfo(member) # 트리뷰상에 존재하는 팀원의 정보가 user_info 폴더에 json파일이 있는지 확인후 없으면 json 파일 생성
-
                     memberNameKr = member_teamInfo[0][member]['nameKr']
 
                     if member not in list(self.memberCache_.keys()):
-                    #if member not in memberCache:
-                        #memberCache.append(member)
                         self.memberCache_[member] = memberNameKr
                     
                         if member not in existMem:
                             existMem.append(member)
 
-                    #if memberNameKr not in all_treeMemList:
-                    #memberItem = QStandardItem(memberNameKr)
                     memberItem = QStandardItem()
                     memberItem.setData(memberNameKr, Qt.DisplayRole)
                     memberItem.setCheckable(True)
@@ -8216,23 +6148,12 @@ class DxManager(QMainWindow):
                     if valueNum < 2: # 하위멤버가 다른팀의 멤버들과 중복되어 2개이상인지 확인
                         teamMemberItem.appendRow(memberItem)
 
-                    #teamMemberItem.appendRow(memberItem)                    
                     all_treeMemList.append(memberNameKr)
                     added_memberList.append(memberNameKr)
 
                     self.get_teamInfo_member(member, memberItem,all_treeMemList, checkedItems, existMem, allInfos, hi)
         
-
         return added_memberList, member_teamInfo
-
-
-
-
-
-
-
-
-
 
 
 
@@ -8243,19 +6164,14 @@ class DxManager(QMainWindow):
     def get_treeAll_items(self, item, checkedItems, uncheckedItems, existMember, hierarchy, hi): 
 
         hi = hi+1
-
         if item.isCheckable() and item.checkState() == Qt.Checked:
             checkedItems.append(item.text())
-
         else:
             uncheckedItems.append(item.text())
 
         if hi not in hierarchy:
             hierarchy[hi] = [item.text()]
-
-
         else:
-
             # 현재 아이템이 전체 멤버하이라키에 존재하는지 확인, 상위 하이라키에 존재하면 하이라키 넘버(dup_hi) 반환
             check_exist, dup_hi = self.check_value_in_lists(hierarchy, item.text())
 
@@ -8268,45 +6184,29 @@ class DxManager(QMainWindow):
             if check_exist == False and (item.text() not in hierarchy[hi]):
                 hierarchy[hi].append(item.text())
 
-
         for row in range(item.rowCount()):
             child_item = item.child(row)
-
             self.get_treeAll_items(child_item, checkedItems, uncheckedItems, existMember, hierarchy, hi)    
 
         return hierarchy        
 
 
-
-
     # 리스트를 값으로 가지고 있는 딕셔너리 안에 특정 값이 존재하는지 확인하는 메서드
     def check_value_in_lists(self, dic, value):
-
         for hi in dic:
             if value in dic[hi]:
                 return True, hi
-
         return False, None
-
-        #return any(value in value_list for value_list in dic.values()) # 어느 하나의 리스트에라도 value가 존재하면 True 반환, 
-
-
 
 
 
     def showTeamTreeView(self):
-
         global teamTreeHierarchy
-
         teamInfo = self.edit_teamTree_item(self.teamTreeModel.invisibleRootItem())
-
         currentMemList = list(teamInfo[0].keys())
 
         if userID not in currentMemList:
             currentMemList.append(userID) 
-
-
-
 
         #### jsonData 내에 포함되어있는 삭제된 팀원의 데이타를 찾아서 삭제시키기 ###############################
         delDatas = []
@@ -8318,7 +6218,6 @@ class DxManager(QMainWindow):
             if delData in jsonData:
                 jsonData.remove(delData)
         #####################################################################################################
-
 
         ## 멤버가 추가되거나 삭제되는 경우에 멤버트리뷰를 갱신하고, 전역변수 teamTreeHierarchy 에도 멤버 변동사항을 적용함.
         teamInfoData = self.getTeamInfo(userID)
@@ -8344,8 +6243,6 @@ class DxManager(QMainWindow):
                     self.teamLeader.appendRow(memberItem)
                     teamHierarchy[2].append(nameKr)
 
-
-
         # 팀원을 삭제하는 경우
         for userMember in allMembers:
             if userMember not in list(self.memberCache_.values()):
@@ -8358,7 +6255,6 @@ class DxManager(QMainWindow):
                         self.teamTreeModel.removeRow(row, parent_index)
 
 
-
         # 재구성된 하이라키를 전역변수 teamTreeHierarchy에 덮어씀.
         teamTreeHierarchy = teamHierarchy # 멤버가 추가된경우 서로 다른 하이라키에 중복되는 멤버가 있을수 있으나, 아래 getJsonData 내의 edit_teamTree_item 메서드에서 정리됨
 
@@ -8369,17 +6265,9 @@ class DxManager(QMainWindow):
 
 
 
-
     def checkExists_atTree(self, item, members, childs, allMembers, teamHierarchy, currentMemList, hi):
         hi = hi+1
-
-
         name = item.text()
-
-        #for mem in self.memberCache_:
-        #    if self.memberCache_[mem]  == name:
-        #        if mem in currentMemList:
-
         allMembers.append(name)
 
         if hi==2:
@@ -8388,25 +6276,14 @@ class DxManager(QMainWindow):
         if hi>2:
             childs.append(name)
 
-
         if hi in teamHierarchy:
             teamHierarchy[hi].append(name)
-
         else:
             teamHierarchy[hi] = [name]
 
-
         for row in range(item.rowCount()):
             child_item = item.child(row)
-
             self.checkExists_atTree(child_item,  members, childs, allMembers, teamHierarchy, currentMemList,hi)    
-
-
-
-
-
-
-
 
 
 
@@ -8422,20 +6299,16 @@ class DxManager(QMainWindow):
         userInfo_json = os.path.join(userInfoPath, user+"_userInfo.json")
 
 
-        if (os.path.exists(userInfo_json)):
-            with open(userInfo_json) as f:
-                userInfoData = json.load(f)
+        userInfoData = self.import_Json(userInfoPath, user+"_userInfo.json")
 
+        if userInfoData:
             name_kr = userInfoData[0]["name_kr"]
             job = userInfoData[0]["job"]
             role = userInfoData[0]["role"]
             team = userInfoData[0]["team"]
             department = userInfoData[0]["department"]
-
-
         #if user information does not exist, write a json file to userInfoPath
         elif(os.path.exists(userInfo_json)==False):
-
             name_kr, role, team, job, department = getUserInfo(user)
             userInfo = [{"name_kr": name_kr, "role":role, "team":team, "job":job, "department":department}]
 
@@ -8453,46 +6326,34 @@ class DxManager(QMainWindow):
 
 
 
-
     # 팀원 편집창 실행 메서드
     def showMemberEditDialog(self):
         dialogUI = memberDialog.EditMemberDialog()
         dialogUI.setWindowTitle("Edit Member")    
-
-        #dialogUI.ui.apply_btn.clicked.connect(self.updateTeamInfoJson)
         dialogUI.exec_()
         self.showTeamTreeView()
-
-
-        
+       
     def showWorkdataWin(self):
-        #self.memberDataInfoUi.show()
         pass
         
-
     #메인창을 스케쥴창으로 변환        
     def showScheduleFrame(self):
-        
         self.dayScheduleFrame.setVisible(True)
         self.dashboardFrame.setVisible(False)
         self.leftSideInfoFrm.setVisible(True)
         self.dayScheduleFrame.raise_()
-        #self.saveBtnFrm.setVisible(True)
         
 
     #메인창을 대쉬보드창으로 변환
     def showDashboardFrame(self):
-
         self.dayScheduleFrame.setVisible(False)
         self.dashboardFrame.setVisible(True)
         self.leftSideInfoFrm.setVisible(False)
         self.dashboardFrame.raise_()
-        #self.saveBtnFrm.setVisible(False)       
 
 
     # 제이슨 파일로 저장하고 사용자에게 다이얼로그 띄움
     def saveFile(self):
-
         existJsonData = self.updateJson(0)
 
         msg_box = QMessageBox(self)
@@ -8500,18 +6361,13 @@ class DxManager(QMainWindow):
         msg_box.setText("현재 스케쥴을 저장하시겠습니까?")
         msg_box.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
         msg_box.setDefaultButton(QMessageBox.Ok)
-
         result = msg_box.exec()
-
 
         if result == QMessageBox.Ok:
             if(self.scheduleExportJson()):
                 QMessageBox.information(self,"save", "현재 스케쥴이 저장되었습니다")
-
             else:
                 QMessageBox.critical(None, "Error", "스케쥴 저장에 실패하였습니다.")  
-
-
 
 
 
@@ -8531,20 +6387,14 @@ class DxManager(QMainWindow):
                     userID_list.append(data['artist'])
 
 
-
         for user in userID_list:
-
             user_jsonDatas=[]
             for data in existJsonData:
-
                 projs = list(data['tasks'][0].keys())
-
                 if data['tasks'] != [{}] and data['artist']==user:
                     for proj in projs:
-
                         if data['tasks'][0][proj] == []:
                             del data['tasks'][0][proj]
-
 
                         # 저장할 제이슨 데이타가 아직 비어있는 초기에 우선 첫번째 데이터 추가.
                         if user_jsonDatas == []:
@@ -8566,38 +6416,27 @@ class DxManager(QMainWindow):
                                     if data not in user_jsonDatas:
                                         user_jsonDatas.append(data)
 
-
-
             saveData = []
             for userData in user_jsonDatas:
-
                 if userData['tasks'] == [{}]:
                     del userData
-
                 else:
                     saveData.append(userData)
-
-
 
             jsonFilePath = currentPath+"/.scheduleData"
             jsonFile = os.path.join(jsonFilePath, user+"_Data.json")
 
             try:
                 with open(jsonFile, 'w') as file:
-                    #json.dump(user_jsonDatas, file, indent=4)
                     json.dump(saveData, file, indent=4)
-                #return True                
 
             except Exception as e:
                 print (f"Error saving to file: {e} ")
                 return False
 
-
             # 스케쥴 파일 백업
             backup_dir = "schedule"
             backup_name = user +"_Data"
-            #self.backup_schedule(saveData, user, backup_dir, backup_name)
-
 
         # 스케쥴 데이터와 연결되는 맨데이, 스테이터스, 평가 등의 데이타를 백업
         self.makeMirrorSchedule(jsonData)
@@ -8608,8 +6447,6 @@ class DxManager(QMainWindow):
         # 커서 
         QApplication.restoreOverrideCursor()
         return True
-
-
 
 
 
@@ -8624,13 +6461,8 @@ class DxManager(QMainWindow):
         self.cleanup_old_backups(backup_path, user, max_backups=10)
 
 
-
-
-
-
     # 백업파일의 오래된 파일 삭제
     def cleanup_old_backups(self, backup_dir, user, max_backups):
-
         #백업 디렉토리의 파일 목록 가져오기
         backup_files = sorted(
             [f for f in os.listdir(backup_dir) if f.startswith(user)],
@@ -8645,12 +6477,9 @@ class DxManager(QMainWindow):
 
 
 
-
-
     def import_Json(self, path, name): 
 
         jsonFile = os.path.join(path, name)
-
         jsonData = []
         if (os.path.exists(jsonFile)):
             with open(jsonFile) as f:
@@ -8659,12 +6488,9 @@ class DxManager(QMainWindow):
         return jsonData
 
 
-
     # 이벤트루프와 쓰레드가 동시에 사용하게 되면 충돌이 생기는것으로 보여 다른이름으로 만든 import_Json과 동일한 메서드
     def import_Json_Thread(self, path, name): 
-
         jsonFile = os.path.join(path, name)
-
         jsonData = []
         if (os.path.exists(jsonFile)):
             with open(jsonFile) as f:
@@ -8676,7 +6502,6 @@ class DxManager(QMainWindow):
 
 
     def export_Json(self, path, name, data):
-
         jsonFile = os.path.join(path, name)
 
         try:
@@ -8694,7 +6519,6 @@ class DxManager(QMainWindow):
 
     # 이벤트루프와 쓰레드가 동시에 사용하게 되면 충돌이 생기는것으로 보여 다른이름으로 만든 export_Json과 동일한 메서드
     def export_Json_Thread(self, path, name, data):
-
         jsonFile = os.path.join(path, name)
 
         try:
@@ -8709,19 +6533,14 @@ class DxManager(QMainWindow):
 
 
 
-
-
     def findProj(self, taskName):
 
         showCode = ""      
-
         for data in jsonData:
             for projDatas in data["tasks"]:
                 for show, tasks in projDatas.items():
-
                     if taskName[1] in tasks:
                         showCode = show
-
 
         if(showCode != ""):
             return showCode
@@ -8737,14 +6556,9 @@ class DxManager(QMainWindow):
         invisibleRoot = self.teamTreeModel.invisibleRootItem()
         rootItem = invisibleRoot.child(0)
 
-        #teamInfo = self.getTeamInfo(userID)
-
         teamInfo = [{}]
-        
         for mem in list(self.memberCache_.keys()):
-
             memberInfo = self.getTeamInfo(mem)
-
             if memberInfo != []:
                 for teamMem in memberInfo[0]:
                     if teamMem not in teamInfo[0]:
@@ -8765,8 +6579,6 @@ class DxManager(QMainWindow):
                 memberEN.append(member)                    
                 if member not in self.memberEN:
                     self.memberEN.append(member)
-
-        #shotList = self.getShotlist_member(memberEN) # 멤버 트리뷰에서 팀원의 선택 및 해제에 맞게 샷 리스트를 업데이트
 
         taskListDic = self.get_ShotlistDic(memberEN) # 멤버 트리뷰에서 팀원의 선택 및 해제에 맞게 샷 리스트를 업데이트
         containDic = self.containsTask(taskListDic)  # 현재 배치된 스케쥴에 해당 태스크가 포함되어있는지 확인하는 메서드
@@ -8792,8 +6604,6 @@ class DxManager(QMainWindow):
 
     # 샷 리스트뷰의 리스트 갱신
     def reloadShotList(self):
-
-        #print ("reloadShotList_")
 
         QApplication.setOverrideCursor(Qt.WaitCursor)
 
@@ -8837,9 +6647,7 @@ class DxManager(QMainWindow):
 
         containDic = self.containsTask(taskListDic)  # 현재 배치된 스케쥴에 해당 태스크가 포함되어있는지 확인하는 메서드
 
-
-
-
+        #< 삭제금지>
         ###   selectAll 컨텍스트 메뉴가 실행되면,  팀원이 많은경우 멀티 쓰레드상 데이타를 읽어오것이 느려져서 아래 if문 아래 프로세스가
         ###   먼저 진행되어 샷리스트뷰가 꺼졌다 켜지는 현상이 발생함. 이 현상을 없애기 위해 아래 if 문을 추가하였음
         ###   selectAll 로 reloadShotListView가 실행된경우 아래 if 문에 의해 if문 아래 내용은 건너뛰게 되며
@@ -8859,14 +6667,12 @@ class DxManager(QMainWindow):
             shotlist_model = ddlv.DragDropModel(taskList, containDic, self.sort_column) 
             self.shotListview.setModel(shotlist_model)
 
-
             del old_model # 샷리스트뷰의 기존모델은 삭제
 
             delegate = ddlv.ProgressDelegate(containDic)
             self.shotListview.setItemDelegate(delegate)
 
             self.shotListview.setEditTriggers(QAbstractItemView.NoEditTriggers) # 리스트뷰내 아이템을 더블클릭하였을때 편집모드가 작동되지 않도록 함
-            #self.shotListview.doubleClicked.connect(lambda index: self.openTaskInfoWin(self.shotListview, index))
 
             # 리프레시 되기전의 정렬상태와 같이 일치시키기
             self.sortShotlistview()
@@ -8882,35 +6688,7 @@ class DxManager(QMainWindow):
             # 스테이터스의 뷰 셋업을 샷리스트뷰에도 적용시키기
             self.set_listView_view(self.shotListview, shotlist_model)
 
-
-        """
-        #############################  차후에 이상없으면 삭제예정 ##########################################################
-
-        if self.select_ctxMenu == 1 or self.reload_tatic == 1:  # 컨텍스트 메뉴 select All 이거나 refresh 버튼이 눌려진 경우
-
-            self.MT_reloadShotList = 1
-
-            if self.MT_reloadShotList == 1 and self.MT_selAll_thread == 1:
-                print ("(selAll)reloadShotList win!!")
-                self.updateJson(0)
-                self.setItemColor_taskList() # 태스크리스트 아이템들의 백그라운드 색깔 지정
-
-                self.MT_reloadShotList = 0
-                self.MT_selAll_thread = 0
-
-        else:
-            self.updateJson(0)
-            self.setItemColor_taskList() # 태스크리스트 아이템들의 백그라운드 색깔 지정
-
-        #############################  차후에 이상없으면 삭제예정 ##########################################################
-
-        """
-
         QApplication.restoreOverrideCursor()
-
-
-
-
 
 
 
@@ -8931,42 +6709,22 @@ class DxManager(QMainWindow):
                 item = shotList_model.data(index, Qt.DisplayRole)
 
                 project = connect_shot_proj[item]
-                #start, end, shotManday, projManday, progressValue_shot, progressValue_proj, status, artist, artistKr, projTitle, process = self.get_TaskInfo_wip(item, taskInfoJson, project)
-
                 endDate_py = connect_shot_schedule[item][1]
 
                 if endDate_py: # 스케쥴 지정이 되어있는경우
                     date_obj = datetime.strptime(endDate_py, "%Y-%m-%d %H:%M:%S")
                     Qdate_obj = QDate(date_obj.year, date_obj.month, date_obj.day)
                     
-                    #QcurrentDate = QDate((listView_date["year"]), (listView_date["month"]), (listView_date["day"]))
-
                     if monday <= Qdate_obj <= friday:#QcurrentDate  == Qdate_obj: # 엔드데이트와 현재리스트뷰 날짜가 일치하는경우 
                         color = QColor(94,29,35)                    
                         shotList_model.set_background_color(row, color)                    
-
                     else:
                         color = QColor(0,0,0,0)                     
                         shotList_model.set_background_color(row, color)                    
 
-
                 else: # 스케쥴이 없는경우
                     color = QColor(0,0,0,0)                    
                     shotList_model.set_background_color(row, color)  
-
-
-                """
-                end_Q = QDate.fromString(end, "yyyy-MM-dd")
-
-                if monday <= end_Q <= friday:
-                    color = QColor(94,29,35)
-                    shotList_model.set_background_color(row, color)
-                """
-
-
-
-
-
 
 
 
@@ -8979,38 +6737,22 @@ class DxManager(QMainWindow):
         checkedMem, uncheckedMem = self.get_teamTree_member() # 현재 선택된 멤버 리스트 가져오기        
 
         for task in list(taskListDic.keys()):
-
             proj = taskListDic[task]
-
             for mem in checkedMem:
                 memEN = ""
                 for member in self.memberCache_:
                     if self.memberCache_[member] == mem:
                         memEN = member
-                #print (memEN)
+
                 for data in jsonData:
                     if data["artist"] == memEN:
                         if proj in data["tasks"][0]:
-                            #if memEN == "gayeong.park":
-                            #    print (data)
                             if task[1] in data["tasks"][0][proj]:  
                                 containStatus[task] = 1
-                            #elif  task[1] not in data["tasks"][0][proj]:  
-                            #    containStatus[task] = 0
-                #print ("##")
-
 
         return containStatus
 
             
-
-
-
-
-
-
-
-
 
 
     # 멤버 트리뷰의 선택한 인덱스의 태스크 정보를 읽어오기 
@@ -9035,46 +6777,22 @@ class DxManager(QMainWindow):
 
 
 
-
-
-
-
-
     # 멤버 트리뷰에서 팀원의 선택 및 해제에 맞게 샷 리스트를 업데이트
     def getShotlist_member(self, members):
 
-        selected_indexes = self.projListview.selectedIndexes()
-        selectedItems = [index.data() for index in selected_indexes]
-
-        #############################################################
-        #### 아래코드를 추가하여 현재 프로젝트 리스트뷰를 그대로 사용할수 있을지 확인
-        selectedProj = []
-        for item in selectedItems:
-            for proj in self.projects:
-                if self.projects[proj][1] == item:
-                    selectedProj.append(proj)
-
-        #selectedProj = [index.data() for index in selected_indexes]
-
-
-        #taskInfoJson = self.import_Json(currentPath+"/.task_info", userID+"_task_info.json")
-
-
+        selectedProj = self.get_selected_projects()
         taskInfo = {}
         proj_member_shots={}
         for sel_proj in selectedProj:
 
             member_shot = {}
 
-            #print (self.memberEN)
-
             for member in members:
 
+                #< 삭제금지 >
                 # 1. 현재유저의 태스크정보를 읽어와 json파일에 저장후 memberCache 변수에 저장
                 # 2. 멤버트리뷰에 유저가 체크를 추가할때마다 먼저 memberCache 변수 확인후 없다면 해당 체크된 멤버의 태스크 정보를 가져온후 jason 업데이트후 memberCache 저장
                 # 3. 메서드 호출시 먼저 memberCache를 확인하고 태스크정보를 가지고 오려는 유저가 memberCache안에 있다면 json파일만 열어서 정보 가져가기
-                #taskInfoJson = self.import_Json(currentPath+"/.task_info", userID+"_task_info.json")
-
                 if member in list(self.taskInfoJson.keys()):
                     taskInfo[member] = self.taskInfoJson[member]                    
 
@@ -9082,8 +6800,6 @@ class DxManager(QMainWindow):
                     taskInfo[member] = self.getTaskInfo(member)
                     self.taskInfoJson[member] = taskInfo[member]
                     self.export_Json(currentPath+"/.task_info", userID+"_task_info.json", self.taskInfoJson)
-                    #self.export_Json(currentPath+"/.task_info", userID+"_task_info.json", taskInfoJson)
-                    #memberCache.append(member)
 
 
                 progressRate = 0
@@ -9112,20 +6828,6 @@ class DxManager(QMainWindow):
                         progressRate = str(act_manday) + "/" + str(bd_manday)
 
 
-                        """
-                        if act_manday == None or bd_manday == None:
-                            progressRate = 0
-
-                        elif float(act_manday) == 0 or float(bd_manday) ==0:
-                            progressRate = 0
-
-                        elif float(bd_manday) != 0 and float(act_manday) != 0:
-                            progressRate = round((float(act_manday) / float(bd_manday))*100, 2)
-
-                        if progressRate > 100:
-                            progressRate = 100                            
-                        """
-
                         context = taskInfo[member][i]["context"]
                         if  context.find('/') != -1:
                             contextList = context.split('/')
@@ -9133,7 +6835,6 @@ class DxManager(QMainWindow):
 
                         shot_manday = (shot, progressRate)
                         shot_manday_list.append(shot_manday)
-
 
                         # 파트 지정
                         part=""
@@ -9146,19 +6847,14 @@ class DxManager(QMainWindow):
                         elif process == "creature":
                             part = "R"
 
-
                         shot_manday_status = (grade, shot, progressRate, status, part)
                         shot_manday_status_list.append(shot_manday_status)
-
-                        #shotList.append(shot)
-                        #member_shot[member] = shot_manday_list
                         member_shot[member] = shot_manday_status_list                        
 
             proj_member_shots[sel_proj] = member_shot
 
 
         projs = list(proj_member_shots.keys())
-
         all_shots = []
         members_proj = []
         for proj in projs:
@@ -9203,15 +6899,7 @@ class DxManager(QMainWindow):
         tempBid_path = currentPath + "/.temp_BDmanday"
         editedTasks_json = self.import_Json(tempBid_path, "edited_mandayData.json")
 
-        selected_indexes = self.projListview.selectedIndexes()
-        selectedItems = [index.data() for index in selected_indexes]
-
-
-        selectedProj = []
-        for item in selectedItems:
-            for proj in self.projects:
-                if self.projects[proj][1] == item:
-                    selectedProj.append(proj)
+        selectedProj = self.get_selected_projects()
 
         taskInfoJson = self.import_Json(currentPath+"/.task_info", userID+"_task_info.json")
 
@@ -9242,6 +6930,7 @@ class DxManager(QMainWindow):
             member_shot = {}
             for member in members:
 
+                #< 삭제금지 >
                 # 1. 현재유저의 태스크정보를 읽어와 json파일에 저장후 memberCache 변수에 저장
                 # 2. 멤버트리뷰에 유저가 체크를 추가할때마다 먼저 memberCache 변수 확인후 없다면 해당 체크된 멤버의 태스크 정보를 가져온후 jason 업데이트후 memberCache 저장
                 # 3. 메서드 호출시 먼저 memberCache를 확인하고 태스크정보를 가지고 오려는 유저가 memberCache안에 있다면 json파일만 열어서 정보 가져가기
@@ -9250,12 +6939,10 @@ class DxManager(QMainWindow):
                     if member in list(self.taskInfoJson.keys()):
                         taskInfo[member] = self.taskInfoJson[member]                    
 
-
                     elif member not in list(self.taskInfoJson.keys()): 
                         taskInfo[member] = self.getTaskInfo(member)
                         self.taskInfoJson[member] = taskInfo[member]
                         self.export_Json(currentPath+"/.task_info", userID+"_task_info.json", self.taskInfoJson)
-
 
                 elif self.reload_tatic == 1:
                         taskInfo[member] = self.getTaskInfo(member)
@@ -9293,34 +6980,11 @@ class DxManager(QMainWindow):
                             bd_manday = "None"                            
 
                         progressRate = str(act_manday) + "/" + str(bd_manday)
-
-
-                        """
-                        if act_manday == None or bd_manday == None:
-                            progressRate = 0
-
-                        elif float(act_manday) == 0 or float(bd_manday) ==0:
-                            progressRate = 0
-
-                        elif float(bd_manday) != 0 and float(act_manday) != 0:
-                            progressRate = round((float(act_manday) / float(bd_manday))*100, 2)
-
-                        if progressRate > 100:
-                            progressRate = 100                            
-                        """
-
                         context = taskInfo[member][i]["context"]
-
-                        #if  context.find('/') != -1:
-                        #    contextList = context.split('/')
-                        #    shot = shot + "/" + contextList[1]
-
                         numContext=context.count("/")
-
 
                         if numContext>0:
                             contextList = context.split('/')
-
                             full_context = ""
                             for i in range(len(contextList)):
                                 if i>0:
@@ -9340,8 +7004,6 @@ class DxManager(QMainWindow):
                         shot_manday = (shot, progressRate)
                         shot_manday_list.append(shot_manday)
 
-
-
                         # 파트 지정
                         part=""
                         if process == "matchmove":
@@ -9353,7 +7015,6 @@ class DxManager(QMainWindow):
                         elif process == "creature":
                             part = "R"
 
-
                         for editTask in editedTasks_json:
 
                             editTask_proj = ""
@@ -9364,9 +7025,6 @@ class DxManager(QMainWindow):
                             if editTask[0] == shot and editTask[2] == part and editTask_proj==sel_proj:
                                 act = progressRate.split("/")[0]
                                 progressRate = act+"/"+editTask[1]
-
-                                
-                        #shot_manday_status = (grade, shot, progressRate, status, part)
 
                         shot_manday_status = (sel_proj.upper(), shot, progressRate, status, part)
                         shot_manday_status_list.append(shot_manday_status)
@@ -9396,7 +7054,6 @@ class DxManager(QMainWindow):
                 for add_task in add_tasks:
                     connect_shot_schedule[add_task] = task_schedule_dic[add_task]
 
-
                 # connect_shot_schedule의 태스크들중 비디 맨데이가 수정된 태스크는 수정된 맨데이를 적용
                 taskList_connectSchedule = list(connect_shot_schedule.keys())
                 editedTasks = [editTask for editTask in editedTasks_json for task in taskList_connectSchedule  if task[1]==editTask[0] and task[4]==editTask[2] and self.projects[task[0].lower()][1] ==  editTask[3]]
@@ -9414,26 +7071,20 @@ class DxManager(QMainWindow):
                         del connect_shot_schedule[scheduleTask[0]]
                         connect_shot_schedule[tuple_scheduleTask] = schedule
 
-                    #elif len(scheduleTask) > 1:
-                    #    warning.warn("동일한 이름의 태스크가 두개 이상 존재합니다.", UserWarning)
-
             proj_member_shots[sel_proj] = member_shot
         
-
         projs = list(proj_member_shots.keys())
-
 
         all_shots = []
         all_shotDic = {}
-        members_proj = [] ###
+        members_proj = []
         for proj in projs:
             members_proj =  list(proj_member_shots[proj].keys())
             for member in members_proj:
                 shotList_member = proj_member_shots[proj][member]
                 for shot in shotList_member:
                     all_shots.append(shot)
-                    all_shotDic[shot]=proj ####
-
+                    all_shotDic[shot]=proj
 
         ###### 각 프로젝트의 어싸인된 태스크들과 해당 프로젝트를 짝지어 전역변수에 저장
         for proj in proj_member_shots:
@@ -9443,10 +7094,8 @@ class DxManager(QMainWindow):
                     for task in proj_member_shots[proj][member]:
                         connect_shot_proj[task] = proj
 
-
         ## 모든 태스크를 확인하여 bd맨데이 수정된 태스크는 이를 반영하여 다시 저장
         all_shots = self.convert_mandayEditList(all_shots) 
-
 
         # all_shotDic 내의 모든 태스크를 맨데이가 수정된 all_shots의 태스크들과 비교하여, 
         # 맨데이 수정된 태스크는 원래 태스크를 지우고 all_shots의 태스크로 대체함.
@@ -9468,22 +7117,11 @@ class DxManager(QMainWindow):
 
 
 
-
-
-
-
-
-
-
-
-
-
     # 팀원 업무데이타 로딩의 멀티쓰레드의 반환값을 가져오는 시그널의 슬롯
     @Slot(list)
     def loadData_result(self, results):
 
         QApplication.setOverrideCursor(Qt.WaitCursor)
-
         global connect_shot_schedule
 
         i=0
@@ -9491,12 +7129,10 @@ class DxManager(QMainWindow):
 
             # connect_shot_schedule 와 새로 생성된 task_schedule_dic 을 합치기
             connect_shot_schedule = {**connect_shot_schedule, **result[2]}
-
             member = list(result[0].keys())[0]
             self.taskInfo[member] = result[1][member]
 
             for proj in result[0][member]:
-
                 if proj not in self.proj_member_shots:
                     self.proj_member_shots[proj] = {}
                     self.proj_member_shots[proj][member] = result[0][member][proj]
@@ -9504,20 +7140,17 @@ class DxManager(QMainWindow):
                 if proj in self.proj_member_shots:
                     self.proj_member_shots[proj][member] = result[0][member][proj]                
 
-
             projs = list(self.proj_member_shots.keys())
 
             all_shots = []
-            #all_shotDic = {}
-            members_proj = [] ###
+            members_proj = [] 
             for proj in projs:
                 members_proj =  list(self.proj_member_shots[proj].keys())
                 for member in members_proj:
                     shotList_member = self.proj_member_shots[proj][member]
                     for shot in shotList_member:
                         all_shots.append(shot)
-                        self.all_shotDic[shot]=proj ####
-
+                        self.all_shotDic[shot]=proj 
 
 
             ###### 각 프로젝트의 어싸인된 태스크들과 해당 프로젝트를 짝지어 전역변수에 저장
@@ -9531,7 +7164,6 @@ class DxManager(QMainWindow):
 
             ## 모든 태스크를 확인하여 bd맨데이 수정된 태스크는 이를 반영하여 다시 저장
             all_shots = self.convert_mandayEditList(all_shots) 
-
 
 
             # all_shotDic 내의 모든 태스크를 맨데이가 수정된 all_shots의 태스크들과 비교하여, 
@@ -9549,109 +7181,14 @@ class DxManager(QMainWindow):
         if self.MT_reloadShotList == 1 and self.MT_selAll_thread == 1:
             print ("(selAll)thread_win!!")
 
-            #self.updateJson(0)
-            #self.setItemColor_taskList() # 태스크리스트 아이템들의 백그라운드 색깔 지정
-
             self.MT_reloadShotList = 0
             self.MT_selAll_thread = 0
 
         self.export_Json(currentPath+"/.task_info", userID+"_task_info.json", self.taskInfo)
-
         self.sel_assigned_proj()
         self.refereshListViews(0, jsonData)
 
         QApplication.restoreOverrideCursor()
-
-
-
-
-
-
-        """
-        self.completed_tasks += 1
-        # connect_shot_schedule 와 새로 생성된 task_schedule_dic 을 합치기
-        connect_shot_schedule = {**connect_shot_schedule, **result[2]}
-
-
-        member = list(result[0].keys())[0]
-        self.taskInfo[member] = result[1][member]
-
-        for proj in result[0][member]:
-
-            if proj not in self.proj_member_shots:
-                self.proj_member_shots[proj] = {}
-                self.proj_member_shots[proj][member] = result[0][member][proj]
-
-            if proj in self.proj_member_shots:
-                self.proj_member_shots[proj][member] = result[0][member][proj]                
-
-
-        projs = list(self.proj_member_shots.keys())
-
-        all_shots = []
-        #all_shotDic = {}
-        members_proj = [] ###
-        for proj in projs:
-            members_proj =  list(self.proj_member_shots[proj].keys())
-            for member in members_proj:
-                shotList_member = self.proj_member_shots[proj][member]
-                for shot in shotList_member:
-                    all_shots.append(shot)
-                    self.all_shotDic[shot]=proj ####
-
-        ###### 각 프로젝트의 어싸인된 태스크들과 해당 프로젝트를 짝지어 전역변수에 저장
-        for proj in self.proj_member_shots:
-            members_proj =  list(self.proj_member_shots[proj].keys())
-            for member in members_proj:
-                if member in list(self.proj_member_shots[proj].keys()):
-                    for task in self.proj_member_shots[proj][member]:
-                        connect_shot_proj[task] = proj
-
-
-        ## 모든 태스크를 확인하여 bd맨데이 수정된 태스크는 이를 반영하여 다시 저장
-        all_shots = self.convert_mandayEditList(all_shots) 
-
-        # all_shotDic 내의 모든 태스크를 맨데이가 수정된 all_shots의 태스크들과 비교하여, 
-        # 맨데이 수정된 태스크는 원래 태스크를 지우고 all_shots의 태스크로 대체함.
-        shotDicKeys = list(self.all_shotDic.keys())
-        for shotDic_task in shotDicKeys:
-            for shot in all_shots:
-                if shot[1]==shotDic_task[1] and shot[0]==shotDic_task[0] and shot[4]==shotDic_task[4]:
-                    if shot[2] != shotDic_task[2]:
-                        proj = self.all_shotDic[shotDic_task]
-                        del self.all_shotDic[shotDic_task]
-                        self.all_shotDic[shot] = proj
-
-
-
-        for worker in self.active_workers[:]:
-
-            print (worker, worker.is_finished)
-
-            if worker.is_finished:
-                #print (worker)
-                self.active_workers.remove(worker)
-
-
-
-
-        if self.completed_tasks == self.total_tasks:
-
-            self.MT_selAll_thread = 1
-
-            if self.MT_reloadShotList == 1 and self.MT_selAll_thread == 1:
-                print ("(selAll)thread_win!!")
-
-                self.updateJson(0)
-                self.setItemColor_taskList() # 태스크리스트 아이템들의 백그라운드 색깔 지정
-
-                self.MT_reloadShotList = 0
-                self.MT_selAll_thread = 0
-
-        print ("multi thread")
-
-        QApplication.restoreOverrideCursor()
-        """
 
 
 
@@ -9662,24 +7199,13 @@ class DxManager(QMainWindow):
 
         tempBid_path = currentPath + "/.temp_BDmanday"
         editedTasks_json = self.import_Json(tempBid_path, "edited_mandayData.json")
-
-        selected_indexes = self.projListview.selectedIndexes()
-        selectedItems = [index.data() for index in selected_indexes]
-
-        selectedProj = []
-        for item in selectedItems:
-            for proj in self.projects:
-                if self.projects[proj][1] == item:
-                    selectedProj.append(proj)
-
+        selectedProj = self.get_selected_projects()
 
         taskInfo = {}
-
         # 활성작업이 최대치 미만이고 대기작업이 남아있으면 추가
         while len(self.active_workers) < self.max_concurrent and self.pending_workers:
 
             self.proj_member_shots = {}
-
             conn_shot_sche = connect_shot_schedule
 
             i, member = self.pending_workers.pop(0)
@@ -9687,9 +7213,7 @@ class DxManager(QMainWindow):
             self.active_workers.append(worker)
             self.threadpool.start(worker)
 
-
         #################################################################################################################################
-
         for worker in self.active_workers[:]:
             if worker.is_finished:
                 self.active_workers.remove(worker)
@@ -9700,8 +7224,8 @@ class DxManager(QMainWindow):
         if self.completed_tasks == self.total_tasks:
             self.timer.stop()
             self.signals.finished.emit(self.results)                
-
         #################################################################################################################################
+
         QApplication.restoreOverrideCursor()
 
 
@@ -9730,14 +7254,7 @@ class DxManager(QMainWindow):
         tempBid_path = currentPath + "/.temp_BDmanday"
         editedTasks_json = self.import_Json(tempBid_path, "edited_mandayData.json")
 
-        selected_indexes = self.projListview.selectedIndexes()
-        selectedItems = [index.data() for index in selected_indexes]
-
-        selectedProj = []
-        for item in selectedItems:
-            for proj in self.projects:
-                if self.projects[proj][1] == item:
-                    selectedProj.append(proj)
+        selectedProj = self.get_selected_projects()
 
         taskInfo = {}
         proj_member_shots={}
@@ -9764,16 +7281,11 @@ class DxManager(QMainWindow):
     # 맨데이가 수정된 샷의 경우 수정된 값으로 비디 맨데이를 수정한후 샷리스트를 반환
     def convert_mandayEditList(self, shotList):
 
-
         global connect_shot_proj
-
         bidEdit_json = self.import_Json(currentPath+"/.temp_BDmanday", "edited_mandayData.json")
 
         edited_taskList = {}
         del_tasks = []
-
-
-
         for task in shotList:
 
             list_task = list(task) # 튜플형태의 task를 리스트로 변경
@@ -9781,22 +7293,17 @@ class DxManager(QMainWindow):
 
             # shotList 안에서 맨데이가 수정된 태스크를 찾기 위해서 제이슨파일 확인
             for editBD_task in bidEdit_json:
-
                 # 맨데이는 수정되었으므로, 태스크명과 파트명만 같은 태스크를 찾아 맨데이 업데이트하기
                 if list_task[1] == editBD_task[0] and list_task[4] == editBD_task[2] and self.projects[proj][1] == editBD_task[3]:
-
                     editedBD_manday = editBD_task[1]
                     new_mandayStatus = list_task[2].split("/")[0] + "/" + editedBD_manday
                     list_task[2] = new_mandayStatus
 
-                    
                     # shotlist 로드될때 만들어진 connect_shot_proj 변수 내 맨데이를 업데이트 하기위하여 해당 태스크(지우고 업데이트 할) 체크
                     for conn_task in connect_shot_proj:
                         if list_task[1] == conn_task[1] and list_task[4] == conn_task[4]:
                             edited_taskList[tuple(list_task)] = connect_shot_proj[conn_task]
                             del_tasks.append(task)
-
-
 
         # ( 튜플이기 때문에 업데이트 할수 없고 삭제하고 새로 추가해야함 )
         # 맨데이 업데이트되어진 태스크를 찾아 업데이트 되기전 데이타 지우고 업데이트된 태스크 추가
@@ -9807,7 +7314,6 @@ class DxManager(QMainWindow):
         for addTask in list(edited_taskList.keys()):
             shotList.append(addTask)
 
-
         # ( 튜플이기 때문에 업데이트 할수 없고 삭제하고 새로 추가해야함 )
         # connect_shot_proj 내에서 맨데이 업데이트를 위해, 이전 맨데이를 가진 태스크를 삭제위해 del_task_proj 에 모으기
         del_task_proj = []
@@ -9817,109 +7323,16 @@ class DxManager(QMainWindow):
                 if delTask[1] == connect_del_task[1] and delTask[4] == connect_del_task[4] and delTask[0] == connect_del_task[0]:
                     del_task_proj.append(connect_del_task)
 
-
         # 업데이트 되기전 이전 맨데이를 가진 태스크를 connect_shot_proj에서 삭제
         for delItem in del_task_proj:
             if delItem in connect_shot_proj:
                 del connect_shot_proj[delItem]
-
 
         # 삭제후 connect_shot_proj 에 수정된 비디멘디로 업데이트된 태스크 추가
         for editBD_Task in edited_taskList:
             connect_shot_proj[editBD_Task] = edited_taskList[editBD_Task]
 
         return shotList
-
-
-
-
-        """
-        # 택틱 bd 맨데이와 스케쥴bd맨데이가 다른 태스크의 데이타프레임 만들기
-        tempBid_path = currentPath + "/.temp_BDmanday/edited_mandayData.json" 
-        if os.path.exists(tempBid_path):
-
-            tempBid_df = pd.read_json(tempBid_path)
-
-            # BD 맨데이 수정된 샷을 샷리스트에서 찾아서 수정된 맨데이로 바꿔줌.
-            editShotList = [] # bd맨데이가 수정된 태스크들이 저장될 리스트
-            del_task_proj_List = [] # connect_shot_proj 변수내에 지워질 태스크의 리스트(bd맨데이가 수정된)
-            proj = ""
-            if shotList:
-                shotList_df = pd.DataFrame(shotList)
-
-                taskName_sr = shotList_df[1] # 태스크 리스트(시리즈)
-                tempTask_sr = tempBid_df[0] # BD맨데이 수정된 태스크리스트(시리즈)
-
-                # connect_shot_proj의 태스크 부분만 데이타프레임으로 만들기 
-                connect_df = pd.DataFrame(list(connect_shot_proj.keys()))
-                # connect_df 의 인덱스를 찾으면 동일한 인덱스로 proj를 찾을수 있도록 connect_shot_proj의 value들을 리스트로 만듦
-                proj_index = list(connect_shot_proj.values())
-
-                # 2,3번 컬럼 삭제
-                connect_df = connect_df.drop([2,3],axis='columns' )
-                dropShotList_df = shotList_df.drop([2,3],axis='columns' )
-
-
-                #print (dropShotList_df)
-                #print ("##")
-
-
-                # 현재 요청된 전체 샷 리스트의 각샷의 프로젝트를 connect_df에서 태스크이름과 파트명이 일치하는것을 찾아서 proj 찾아서 할당
-                for idx in shotList_df.index:
-                    taskName = shotList_df.loc[idx][1]
-                    part = shotList_df.loc[idx][4]
-                    tupleTask = tuple(shotList_df.loc[idx].tolist())
-
-                    idx_data = dropShotList_df.loc[idx]
-
-                    matchRow = connect_df[(connect_df[1] == idx_data[1]) & (connect_df[4] == idx_data[4])]
-
-                    if not matchRow.empty:
-                        matchIndex = matchRow.index[0]
-                        proj = proj_index[matchIndex]
-
-                    #if tupleTask in connect_shot_proj:
-                    #    proj = connect_shot_proj[tupleTask]
-
-                    if taskName in tempTask_sr.values:
-                    #if taskName in taskName_sr.values:
-                        indices = tempBid_df[(tempBid_df[0] == taskName) & (tempBid_df[2] == part)].index.tolist()
-                        taticMandays = shotList_df.loc[idx][2]
-                        taticAct = str(taticMandays.split("/")[0])
-                        editBD = str(tempBid_df.loc[indices[0]][1])
-
-
-                        newMandays = taticAct + "/" + editBD
-
-                        if shotList_df.loc[idx, 2] != newMandays: # 새롭게 만든 맨데이정보와 기존맨데이 정보가 다를경우만 삭제리스트에 추가
-                            del_task_proj_List.append(tupleTask)
-
-                        shotList_df.loc[idx, 2] = newMandays
-                        newTupleTask = tuple(shotList_df.loc[idx].tolist())
-
-                        connect_shot_proj[newTupleTask] = proj
-
-
-
-                # 튜플데이타로 변환하여 새로운 샷리스트에 저장
-                editShotList = [tuple(row) for row in shotList_df.itertuples(index=False)]
-
-                # bd맨데이가 편집되기전 이전 데이타 삭제
-                for delTask in del_task_proj_List:
-                    if delTask in connect_shot_proj:
-                        del connect_shot_proj[delTask]
-
-
-            return editShotList
-
-
-        # BD맨데이를 수정한 데이타가 없다면 원래 데이타를 그대로 반환
-        else:
-            return shotList
-
-        """
-
-
 
 
 
@@ -9936,7 +7349,6 @@ class DxManager(QMainWindow):
 
 
 
-
 def getProjectList():
 
     requestParam = {}
@@ -9949,8 +7361,6 @@ def getProjectList():
         proj = reponse[i]["name"]
         Code = reponse[i]["code"]
         title = reponse[i]["title"]
-
-        #projectList[proj] = Code
         projectList[proj] = [Code, title]
 
     return projectList
@@ -9962,37 +7372,26 @@ def getUserInfo(user):
     import requests
     import json
 
-    #userID = os.popen("logname").read().strip()
-
-    #API_KEY = "c70181f2b648fdc2102714e8b5cb344d"
     requestParam = {}
     requestParam['api_key'] = TATIC_API_KEY
-    requestParam['code'] = user#self.artistLabel.currentText
+    requestParam['code'] = user
     
     infos = requests.get("http://%s/dexter/search/user.php" %(dxConfig.getConf('TACTIC_IP')), params=requestParam).json()
 
-
-    #userName = infos["code"]
     unicodeName = infos["name_kr"]
     role = infos["role"]
-    #phone = infos["mobile_number"]
-    team = infos["department"]#["department_short"]
+    team = infos["department"]
     job = infos["job_title"]
     department = infos["department_short"]
-    #name = convertUnicode(unicodeName)
 
-    #return userName, role, phone, department
     return unicodeName, role, team, job, department
 
 
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
-    #print (QStyleFactory.keys())
 
-
-    #app.setStyle("Fusion")
-    app.setStyle(QtWidgets.QStyleFactory.create("Fusion")) # types ["Windows", "Fusion"]
+    app.setStyle(QtWidgets.QStyleFactory.create("Fusion"))
     app.setPalette(darkTheme.set_palette())
     app.setStyleSheet(darkTheme.set_styleSheet())
 
