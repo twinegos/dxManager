@@ -28,6 +28,8 @@ from PySide2 import QtWidgets
 # 설정 파일 임포트
 import config
 
+# 클래스 모듈 임포트
+
 # 외부 라이브러리 임포트
 import dxConfig
 import requests
@@ -64,7 +66,9 @@ import darkTheme
 
 # 클래스 모듈 임포트
 classPath = currentPath + "/class"
+uiPath = currentPath + "/UI"
 sys.path.append(classPath)
+sys.path.append(uiPath)
 # 클래스 모듈 imports
 import dragDropListView as ddlv 
 import editMemberDialog as memberDialog
@@ -81,8 +85,12 @@ import progressBar_Thread as pb
 import updateUserInfo_Thread as updateUser
 import readOnlyDelegate as readOnly
 import loading_workData as loadData
+from tactic_api_client import TacticAPIClient
 
 userID = config.get_user_id()
+
+# TACTIC API 클라이언트 초기화
+tactic_client = TacticAPIClient()
 
 # JSON 스케줄 파일 임포트
 jsonData = []
@@ -7338,53 +7346,21 @@ class DxManager(QMainWindow):
 
 
     def getTaskInfo(self, name):
-
-        requestParam = {}
-        requestParam['api_key'] = TATIC_API_KEY
-        requestParam['login'] = name
-        taskInfo =  requests.get("http://%s/dexter/search/task.php" %(dxConfig.getConf('TACTIC_IP')), params=requestParam).json()
-
-        return taskInfo
+        """TACTIC API를 통한 태스크 정보 조회 (TacticAPIClient 사용)"""
+        return tactic_client.get_task_info(name)
 
 
 
 
 def getProjectList():
-
-    requestParam = {}
-    requestParam['api_key'] = TATIC_API_KEY
-    requestParam['category'] = 'Active'
-    reponse =  requests.get("http://%s/dexter/search/project.php" %(dxConfig.getConf('TACTIC_IP')), params=requestParam).json()
-
-    projectList = {}
-    for i in range(len(reponse)):
-        proj = reponse[i]["name"]
-        Code = reponse[i]["code"]
-        title = reponse[i]["title"]
-        projectList[proj] = [Code, title]
-
-    return projectList
+    """TACTIC API를 통한 프로젝트 목록 조회 (TacticAPIClient 사용)"""
+    return tactic_client.get_project_list()
 
 
 
 def getUserInfo(user):
-    import dxConfig
-    import requests
-    import json
-
-    requestParam = {}
-    requestParam['api_key'] = TATIC_API_KEY
-    requestParam['code'] = user
-    
-    infos = requests.get("http://%s/dexter/search/user.php" %(dxConfig.getConf('TACTIC_IP')), params=requestParam).json()
-
-    unicodeName = infos["name_kr"]
-    role = infos["role"]
-    team = infos["department"]
-    job = infos["job_title"]
-    department = infos["department_short"]
-
-    return unicodeName, role, team, job, department
+    """TACTIC API를 통한 사용자 정보 조회 (TacticAPIClient 사용)"""
+    return tactic_client.get_user_info(user)
 
 
 
