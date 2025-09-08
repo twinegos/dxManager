@@ -88,7 +88,6 @@ import loading_workData as loadData
 from tactic_api_client import TacticAPIClient
 from data_manager import DataManager
 from ui_controller import UIController
-from schedule_manager import ScheduleManager
 
 userID = config.get_user_id()
 
@@ -222,8 +221,6 @@ class DxManager(QMainWindow):
         # UI 컨트롤러 초기화
         self.ui_controller = UIController(self)
         
-        # 스케줄 매니저 초기화
-        self.schedule_manager = ScheduleManager(userID)
 
         # KEEP: 내용정리 될때까지 하이드시키기 #################
         self.dashboardViewBtn = self.ui.dashboard_btn
