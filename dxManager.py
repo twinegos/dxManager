@@ -86,11 +86,15 @@ import updateUserInfo_Thread as updateUser
 import readOnlyDelegate as readOnly
 import loading_workData as loadData
 from tactic_api_client import TacticAPIClient
+from data_manager import DataManager
 
 userID = config.get_user_id()
 
 # TACTIC API 클라이언트 초기화
 tactic_client = TacticAPIClient()
+
+# 데이터 매니저 초기화
+data_manager = DataManager(userID)
 
 # JSON 스케줄 파일 임포트
 jsonData = []
@@ -4157,7 +4161,7 @@ class DxManager(QMainWindow):
 
     # 스케쥴 제이슨파일을 데이타프레임으로 바꾼뒤 클린업을 한후 데이타프레임 형식으로 반환
     def get_DataFrame_sechedule(self, userPath):
-        
+        """스케줄 DataFrame 조회 (원본 로직 유지)"""
         df = pd.read_json(userPath)
 
         if not df.empty:
@@ -6486,57 +6490,32 @@ class DxManager(QMainWindow):
 
 
     def import_Json(self, path, name): 
-
+        """JSON 파일 임포트 (DataManager 사용)"""
         jsonFile = os.path.join(path, name)
-        jsonData = []
-        if (os.path.exists(jsonFile)):
-            with open(jsonFile) as f:
-                jsonData = json.load(f)
-        
-        return jsonData
+        return data_manager.load_json_data(jsonFile)
 
 
     # 이벤트루프와 쓰레드가 동시에 사용하게 되면 충돌이 생기는것으로 보여 다른이름으로 만든 import_Json과 동일한 메서드
     def import_Json_Thread(self, path, name): 
+        """스레드용 JSON 파일 임포트 (DataManager 사용)"""
         jsonFile = os.path.join(path, name)
-        jsonData = []
-        if (os.path.exists(jsonFile)):
-            with open(jsonFile) as f:
-                jsonData = json.load(f)
-
-        return jsonData
+        return data_manager.load_json_data(jsonFile)
 
 
 
 
     def export_Json(self, path, name, data):
+        """JSON 파일 익스포트 (DataManager 사용)"""
         jsonFile = os.path.join(path, name)
-
-        try:
-            with open(jsonFile, 'w') as file:
-                json.dump(data, file, indent=4)
-                file.flush()
-                os.fsync(file.fileno())
-            return True                
-
-        except Exception as e:
-            print (f"Error saving to file: {e} ")
-            return False
+        return data_manager.save_json_data(data, jsonFile)
 
 
 
     # 이벤트루프와 쓰레드가 동시에 사용하게 되면 충돌이 생기는것으로 보여 다른이름으로 만든 export_Json과 동일한 메서드
     def export_Json_Thread(self, path, name, data):
+        """스레드용 JSON 파일 익스포트 (DataManager 사용)"""
         jsonFile = os.path.join(path, name)
-
-        try:
-            with open(jsonFile, 'w') as file:
-                json.dump(data, file, indent=4)
-            return True                
-
-        except Exception as e:
-            print (f"Error saving to file: {e} ")
-            return False
+        return data_manager.save_json_data(data, jsonFile)
 
 
 
