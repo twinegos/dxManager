@@ -256,47 +256,40 @@ test -d /opt/stdrepo/ANI/Artist/Moon_sungoh/dxManager_sh && echo "경로 접근 
    - 기능: TACTIC API 통신 관련 3개 함수 분리
    - 상태: 외부 테스트 완료, 커밋/푸시 완료
 
+2. **DataManager** ✅ (2025-09-09 완료)
+   - 위치: `class/data_manager.py`
+   - 기능: JSON 데이터 관리 및 스케줄 데이터 처리
+   - 분리된 기능: load_json_data(), save_json_data(), get_dataframe_schedule() 등
+   - 상태: 외부 테스트 완료, 정상 동작 확인됨
+
+3. **UIController** ✅ (2025-09-09 완료)
+   - 위치: `class/ui_controller.py`
+   - 기능: UI 관리 및 리스트뷰 조작
+   - 분리된 기능: get_listview_selected_items() 연결, UI 관리 구조 구축
+   - 상태: 기본 구조 완성, 점진적 확장 예정
+
+4. **ScheduleManager** ❌ (2025-09-09 제거됨)
+   - 상태: 비효율적으로 판단되어 완전 삭제
+   - 이유: 단순 유틸리티 메소드 3개만 분리하여 100라인 오버헤드 발생
+   - 교훈: 클래스 분리는 실질적 가치가 있을 때만 진행해야 함
+   - 복구: check_date_exists(), check_dateMember_exists(), check_value_in_Dict() 메소드를 원래 위치로 복구
+
 ### 분리 우선순위 및 계획
 
-#### 1. DataManager (우선순위: 높음) - 다음 진행 예정
-**기능 범위:**
-- JSON 데이터 로딩/저장 로직
-- 스케줄 데이터 처리 및 검증
-- 미러 데이터 관리
-- 데이터 백업 및 복구
-
-**분리 대상 메소드들 (예상):**
-- JSON 파일 읽기/쓰기 관련 함수들
-- 데이터 검증 및 변환 로직
-- 스케줄 데이터 구조 관리
-- 미러 데이터 동기화 로직
-
-#### 2. UIController (우선순위: 높음)
-**기능 범위:**
-- 리스트뷰 관리 (스케줄, 샷, 프로젝트)
-- 트리뷰 관리 (팀원, 사용자)
-- UI 이벤트 처리 및 업데이트
-- 드래그앤드롭 관리
-
-**분리 시 주의사항:**
-- UI 로직의 복잡성으로 인한 신중한 접근 필요
-- 이벤트 핸들링 의존성 고려
-
-#### 3. ScheduleManager (우선순위: 중간)
-**기능 범위:**
-- 스케줄 계산 로직 (시작/종료일)
-- 맨데이 계산 및 분배
-- 날짜 처리 및 검증
-- 분기별 작업량 계산
-
-#### 4. TeamManager (우선순위: 중간)
+#### 1. TeamManager (우선순위: 높음) - 현재 진행 중
 **기능 범위:**
 - 팀 정보 관리 및 업데이트
 - 사용자 권한 처리
 - 멤버 관리 (추가/삭제/수정)
 - 팀 구조 관리
 
-#### 5. FileManager (우선순위: 낮음)
+**분리 대상 메소드들 (예상):**
+- 팀 정보 JSON 파일 관리
+- 팀원 추가/삭제/수정 로직
+- 팀 구조 트리 관리
+- 사용자 권한 및 역할 관리
+
+#### 2. FileManager (우선순위: 중간)
 **기능 범위:**
 - 파일 입출력 관리
 - 백업 파일 관리
@@ -311,11 +304,11 @@ test -d /opt/stdrepo/ANI/Artist/Moon_sungoh/dxManager_sh && echo "경로 접근 
 5. **문서화**: 각 분리된 클래스의 역할과 사용법 명시
 
 ### 진행 상황 추적
-- [x] TacticAPIClient 분리 (2025-09-08)
-- [ ] DataManager 분리 (진행 예정)
-- [ ] UIController 분리
-- [ ] ScheduleManager 분리  
-- [ ] TeamManager 분리
+- [x] TacticAPIClient 분리 (2025-09-08) ✅
+- [x] DataManager 분리 (2025-09-09) ✅  
+- [x] UIController 분리 (2025-09-09) ✅
+- [x] ScheduleManager 분리 (2025-09-09) ❌ 제거됨
+- [ ] TeamManager 분리 (현재 진행 중)
 - [ ] FileManager 분리
 
 ## 주석문 정리 작업 기록 (2025-09-04)
