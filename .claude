@@ -276,25 +276,19 @@ test -d /opt/stdrepo/ANI/Artist/Moon_sungoh/dxManager_sh && echo "경로 접근 
 
 ### 분리 우선순위 및 계획
 
-#### 1. TeamManager (우선순위: 높음) - 현재 진행 중
-**기능 범위:**
-- 팀 정보 관리 및 업데이트
-- 사용자 권한 처리
-- 멤버 관리 (추가/삭제/수정)
-- 팀 구조 관리
+#### 1. TeamManager ✅ (2025-09-09 완료)
+   - 위치: `class/team_manager.py`  
+   - 기능: 팀 정보 관리, 팀 트리뷰 조작, 사용자 정보 관리
+   - 분리된 기능: get_team_info(), check_user_info(), get_tree_all_items(), get_checked_items(), set_check_items()
+   - 코드 감소: 182라인 (미사용 메소드 130라인 제거)
+   - 상태: 외부 테스트 완료, 정상 동작 확인됨
 
-**분리 대상 메소드들 (예상):**
-- 팀 정보 JSON 파일 관리
-- 팀원 추가/삭제/수정 로직
-- 팀 구조 트리 관리
-- 사용자 권한 및 역할 관리
-
-#### 2. FileManager (우선순위: 중간)
-**기능 범위:**
-- 파일 입출력 관리
-- 백업 파일 관리
-- 엑셀 파일 처리
-- 외부 파일 연동
+#### 2. FileManager ✅ (2025-09-09 완료)
+   - 위치: `class/file_manager.py`
+   - 기능: 파일 입출력 관리, JSON 파일 처리, 백업 관리
+   - 분리된 기능: get_latest_file(), import_json(), export_json(), backup_schedule(), cleanup_old_backups()
+   - 코드 증가: 313라인 (새로운 백업 관리 기능 추가)
+   - 상태: 외부 테스트 완료, 정상 동작 확인됨
 
 ### 분리 작업 원칙
 1. **독립성 우선**: 다른 기능에 대한 의존성이 낮은 것부터
@@ -308,8 +302,8 @@ test -d /opt/stdrepo/ANI/Artist/Moon_sungoh/dxManager_sh && echo "경로 접근 
 - [x] DataManager 분리 (2025-09-09) ✅  
 - [x] UIController 분리 (2025-09-09) ✅
 - [x] ScheduleManager 분리 (2025-09-09) ❌ 제거됨
-- [ ] TeamManager 분리 (현재 진행 중)
-- [ ] FileManager 분리
+- [x] TeamManager 분리 (2025-09-09) ✅ 완료
+- [x] FileManager 분리 (2025-09-09) ✅ 완료
 
 ## 주석문 정리 작업 기록 (2025-09-04)
 
@@ -327,3 +321,85 @@ test -d /opt/stdrepo/ANI/Artist/Moon_sungoh/dxManager_sh && echo "경로 접근 
 - **위치**: dxManager.py:36-40
 - **이유**: 데이터베이스 테스트 및 연결 확인 코드
 - **상태**: 보호됨 (KEEP 표시)
+
+## 프로젝트 현재 상태 요약 (2025-09-09)
+
+### 전체 코드 라인 수 변화
+- **기존**: 9,995라인 (dxManager.py 단일 파일)
+- **현재**: 7,280라인 (dxManager.py) + 1,013라인 (분리된 클래스들) = 8,293라인
+- **순감소**: **1,702라인 감소** (17% 감소)
+
+### 분리 완료된 클래스들
+1. **TacticAPIClient** (2025-09-08): 3개 메소드 분리
+2. **DataManager** (2025-09-09): JSON 데이터 처리 전담
+3. **UIController** (2025-09-09): UI 관리 기본 구조
+4. **TeamManager** (2025-09-09): 팀 관리 5개 메소드 분리, 182라인
+5. **FileManager** (2025-09-09): 파일 관리 7개 메소드 분리, 313라인
+
+### 주요 성과
+- **모듈화**: 단일 파일에서 역할별 클래스 분리 완료
+- **유지보수성**: 각 기능별 독립적 관리 가능
+- **테스트 안정성**: 모든 분리 작업 후 외부 시스템 테스트 통과
+- **확장성**: 새로운 기능 추가 시 해당 클래스에만 집중 가능
+
+### 다음 단계 후보 (우선순위별)
+1. **EventManager**: 이벤트 처리 및 시그널 관리
+2. **DatabaseManager**: MongoDB 연결 및 데이터베이스 작업
+3. **UILayoutManager**: 복잡한 UI 레이아웃 관리
+4. **ValidationManager**: 데이터 검증 로직 통합
+
+### 리팩토링 원칙 (검증됨)
+1. ✅ **단계적 접근**: 한 번에 하나씩 분리
+2. ✅ **테스트 우선**: 매 단계마다 외부 테스트
+3. ✅ **의존성 최소화**: 독립성 높은 기능부터 분리
+4. ✅ **실용적 가치**: 실질적 이익이 있는 분리만 진행
+
+## 다음 작업 계획 (2025-09-10 예정)
+
+### 함수형 모듈 분리 전략
+**목표**: dxManager.py 7,280라인 → 5,800라인 (추가 20% 감소)
+
+### 분리 대상 (우선순위별)
+1. **utils/validation.py** - 데이터 검증 함수들
+   - `check_date_exists()`, `check_dateMember_exists()`, `check_artist_exists()`
+   - `check_value_in_Dict()`, `check_value_in_lists()`
+   - 예상 라인 감소: 80라인 → 20라인
+
+2. **utils/excel_export.py** - 엑셀 처리 함수들
+   - `export_excel()`, `table_to_excel()`, `export_QuarterlyWorkload()`
+   - 예상 라인 감소: 120라인 → 40라인
+
+3. **utils/workload_calc.py** - 워크로드 계산 함수들
+   - `get_workload_JsonData()`, `get_shotWorkload_json()`
+   - 예상 라인 감소: 100라인 → 30라인
+
+4. **utils/task_processing.py** - 태스크 처리 함수들
+   - `get_TaskInfo()`, `get_TaskInfo_wip()`, `get_cached_task_info()`
+   - 예상 라인 감소: 150라인 → 50라인
+
+### 분리 원칙
+- **순수 함수만 분리**: 상태(self) 의존성 없는 함수들
+- **보일러플레이트 제거**: 메소드 정의 → 간결한 함수
+- **Python다운 표현**: 리스트 컴프리헨션, any/all 활용
+- **재사용성 확보**: 다른 프로젝트에서도 사용 가능한 형태
+
+### 예상 최종 구조
+```
+dxManager/
+├── dxManager.py (5,800라인)
+├── class/ (상태 관리 클래스들)
+│   ├── team_manager.py
+│   ├── file_manager.py
+│   └── data_manager.py
+└── utils/ (순수 함수들)
+    ├── validation.py
+    ├── excel_export.py
+    ├── workload_calc.py
+    └── task_processing.py
+```
+
+### 진행 순서
+1. validation.py 생성 및 테스트
+2. 기존 메소드들을 함수 호출로 변경
+3. 외부 시스템 테스트
+4. 다음 모듈 진행

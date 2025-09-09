@@ -88,6 +88,8 @@ import loading_workData as loadData
 from tactic_api_client import TacticAPIClient
 from data_manager import DataManager
 from ui_controller import UIController
+from team_manager import TeamManager
+from file_manager import FileManager
 
 userID = config.get_user_id()
 
@@ -140,6 +142,12 @@ class DxManager(QMainWindow):
 
         self.MT_reloadShotList = 0
         self.MT_selAll_thread = 0
+
+        # 팀 관리자 초기화 (checkUserInfo 호출 전에 초기화 필요)
+        self.team_manager = TeamManager(self)
+        
+        # 파일 관리자 초기화
+        self.file_manager = FileManager(self)
 
         self.currName_kr, self.role, self.team, self.job, self.department = self.checkUserInfo(userID) # 현재유저의 정보 가져오기
 
@@ -562,28 +570,8 @@ class DxManager(QMainWindow):
 
 
     def get_latest_file(self, path):
-
-        patterns = ["thumb", "_icon_", "_web_"]
-
-        all_items = [os.path.join(path, item) for item in os.listdir(path) if not any(pattern in item for pattern in patterns)]#"thumb" not in item]
-
-
-        if not all_items:
-            QMessageBox.information(None, "알 림", "프리뷰가 존재하지 않습니다.")
-
-        #가장 최근 수정된 파일 찾기
-        latest_item = max(all_items, key=os.path.getmtime)
-
-        if os.path.isdir(latest_item): # 최종파일이 폴더인경우 오픈
-            subprocess.run(["xdg-open", str(latest_item)], check=True)
-
-        elif os.path.isfile(latest_item) and latest_item.lower().endswith((".mov", ".mp4", ".jpg", "jpeg", "png", "exr")): # 최종파일이 파일인경우 해당 확장자의 파일들은 rv로 재생
-
-            cmd = ["/backstage/dcc/DCC", "rez-env",  "rv-1.0.0",  "--",  "rv", latest_item]
-            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-
-            stdout, stderr = process.communicate()
-            #print (stderr) # 현재 메모리 에러를 발생시키고 있음 , 차후에 확인필요
+        """최신 파일 가져오기 (FileManager 사용)"""
+        return self.file_manager.get_latest_file(path)
 
 
 
@@ -5899,25 +5887,15 @@ class DxManager(QMainWindow):
 
     # 트리뷰 루트아이템 이하 모든 아이템들중 체크박스 체크되어있는 아이템만 리스트에 저장하는 재귀함수
     def get_CheckedItems(self, item, checkedItems): 
-
-        if item.isCheckable() and item.checkState() == Qt.Checked:
-            checkedItems.append(item.text())
-
-        for row in range(item.rowCount()):
-            child_item = item.child(row)
-            self.get_CheckedItems(child_item, checkedItems)
+        """팀 관리자의 get_checked_items 메소드를 호출합니다."""
+        self.team_manager.get_checked_items(item, checkedItems)
 
 
 
     # 트리뷰를 새로고침하기전 저장한 체크박스 on되어있는 리스트변수를 참조하여 새로고침후 다시 원래대로 체크박스 on
     def set_CheckItems(self, item, checkedItems):
-
-        if item.text() in checkedItems:
-            item.setCheckState(Qt.Checked)
-
-        for row in range(item.rowCount()):
-            childItem = item.child(row)
-            self.set_CheckItems(childItem, checkedItems)
+        """팀 관리자의 set_check_items 메소드를 호출합니다."""
+        self.team_manager.set_check_items(item, checkedItems)
 
 
 
@@ -5948,18 +5926,7 @@ class DxManager(QMainWindow):
     # 제이슨으로 저장된 리더의 팀멤버가 있다면 정보를 읽어옴
     def getTeamInfo(self, member): 
         """팀 멤버의 정보를 JSON 파일에서 로드합니다."""
-        teamInfoPath = currentPath + "/.team_Info"
-        teamInfoJson = os.path.join(teamInfoPath, f"{member}_teamInfo.json")
-
-        teamInfoData = []
-        if os.path.exists(teamInfoJson):
-            try:
-                with open(teamInfoJson, 'r', encoding='utf-8') as f:
-                    teamInfoData = json.load(f)
-            except (json.JSONDecodeError, IOError) as e:
-                print(f"Error loading team info for {member}: {e}")
-        
-        return teamInfoData
+        return self.team_manager.get_team_info(member)
 
 
 
@@ -6170,33 +6137,8 @@ class DxManager(QMainWindow):
 
     # 트리뷰의 하위 멤버를 모두 읽어오기 위한 재귀함수
     def get_treeAll_items(self, item, checkedItems, uncheckedItems, existMember, hierarchy, hi): 
-
-        hi = hi+1
-        if item.isCheckable() and item.checkState() == Qt.Checked:
-            checkedItems.append(item.text())
-        else:
-            uncheckedItems.append(item.text())
-
-        if hi not in hierarchy:
-            hierarchy[hi] = [item.text()]
-        else:
-            # 현재 아이템이 전체 멤버하이라키에 존재하는지 확인, 상위 하이라키에 존재하면 하이라키 넘버(dup_hi) 반환
-            check_exist, dup_hi = self.check_value_in_lists(hierarchy, item.text())
-
-            # 상위 하이라키에 존재하는 경우, 가 상위 하이라키에서 멤버 삭제
-            if dup_hi is not None: 
-                if hi != dup_hi and dup_hi < hi: 
-                    hierarchy[dup_hi].remove(item.text())
-                    check_exist = False
-
-            if check_exist == False and (item.text() not in hierarchy[hi]):
-                hierarchy[hi].append(item.text())
-
-        for row in range(item.rowCount()):
-            child_item = item.child(row)
-            self.get_treeAll_items(child_item, checkedItems, uncheckedItems, existMember, hierarchy, hi)    
-
-        return hierarchy        
+        """팀 관리자의 get_tree_all_items 메소드를 호출합니다."""
+        return self.team_manager.get_tree_all_items(item, checkedItems, uncheckedItems, existMember, hierarchy, hi)        
 
 
     # 리스트를 값으로 가지고 있는 딕셔너리 안에 특정 값이 존재하는지 확인하는 메서드
@@ -6296,7 +6238,10 @@ class DxManager(QMainWindow):
 
 
     def checkUserInfo(self, user):
-
+        """사용자 정보를 확인하고 반환합니다."""
+        # 기존 구조 유지를 위해 TeamManager의 check_user_info 호출 후 기존 로직 사용
+        self.team_manager.check_user_info(user)
+        
         name_kr = ""
         role = ""
         job = ""
@@ -6305,7 +6250,6 @@ class DxManager(QMainWindow):
 
         userInfoPath = currentPath+"/.user_Info"
         userInfo_json = os.path.join(userInfoPath, user+"_userInfo.json")
-
 
         userInfoData = self.import_Json(userInfoPath, user+"_userInfo.json")
 
@@ -6460,58 +6404,41 @@ class DxManager(QMainWindow):
 
     # 백업파일 생성
     def backup_schedule(self, saveData, user, backup_dir, backup_name):
-
-        timestemp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_path = currentPath + "/.backup/" + backup_dir
-        backup_file =  backup_name + "_" + timestemp + ".json"
-        self.export_Json(backup_path, backup_file, saveData)
-
-        self.cleanup_old_backups(backup_path, user, max_backups=10)
+        """스케줄 백업 (FileManager 사용)"""
+        return self.file_manager.backup_schedule(saveData, user, backup_dir, backup_name)
 
 
     # 백업파일의 오래된 파일 삭제
     def cleanup_old_backups(self, backup_dir, user, max_backups):
-        #백업 디렉토리의 파일 목록 가져오기
-        backup_files = sorted(
-            [f for f in os.listdir(backup_dir) if f.startswith(user)],
-            key=lambda x: os.path.getmtime(os.path.join(backup_dir, x))
-        )
-
-        #최대 백업 개수를 초과하면 오래된 파일 삭제
-        if len(backup_files) > max_backups:
-            for old_file in backup_files[:len(backup_files)-max_backups]:
-                os.remove(os.path.join(backup_dir, old_file))
+        """오래된 백업 파일 정리 (FileManager 사용)"""
+        return self.file_manager.cleanup_old_backups(backup_dir, user, max_backups)
 
 
 
 
     def import_Json(self, path, name): 
-        """JSON 파일 임포트 (DataManager 사용)"""
-        jsonFile = os.path.join(path, name)
-        return data_manager.load_json_data(jsonFile)
+        """JSON 파일 임포트 (FileManager 사용)"""
+        return self.file_manager.import_json(path, name)
 
 
     # 이벤트루프와 쓰레드가 동시에 사용하게 되면 충돌이 생기는것으로 보여 다른이름으로 만든 import_Json과 동일한 메서드
     def import_Json_Thread(self, path, name): 
-        """스레드용 JSON 파일 임포트 (DataManager 사용)"""
-        jsonFile = os.path.join(path, name)
-        return data_manager.load_json_data(jsonFile)
+        """스레드용 JSON 파일 임포트 (FileManager 사용)"""
+        return self.file_manager.import_json_thread(path, name)
 
 
 
 
     def export_Json(self, path, name, data):
-        """JSON 파일 익스포트 (DataManager 사용)"""
-        jsonFile = os.path.join(path, name)
-        return data_manager.save_json_data(data, jsonFile)
+        """JSON 파일 익스포트 (FileManager 사용)"""
+        return self.file_manager.export_json(path, name, data)
 
 
 
     # 이벤트루프와 쓰레드가 동시에 사용하게 되면 충돌이 생기는것으로 보여 다른이름으로 만든 export_Json과 동일한 메서드
     def export_Json_Thread(self, path, name, data):
-        """스레드용 JSON 파일 익스포트 (DataManager 사용)"""
-        jsonFile = os.path.join(path, name)
-        return data_manager.save_json_data(data, jsonFile)
+        """스레드용 JSON 파일 익스포트 (FileManager 사용)"""
+        return self.file_manager.export_json_thread(path, name, data)
 
 
 
