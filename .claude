@@ -354,36 +354,19 @@ test -d /opt/stdrepo/ANI/Artist/Moon_sungoh/dxManager_sh && echo "경로 접근 
 3. ✅ **의존성 최소화**: 독립성 높은 기능부터 분리
 4. ✅ **실용적 가치**: 실질적 이익이 있는 분리만 진행
 
-## Phase 2 utils 모듈 분리 진행 (2025-09-10)
+## Phase 2 utils 모듈 분리 시도 및 철회 (2025-09-10)
 
-### 완료된 utils 모듈 분리
-1. **utils/validation.py** ✅ (2025-09-10 완료)
-   - 위치: `utils/validation.py`
-   - 기능: 데이터 검증 함수들 분리
-   - 분리된 함수: `check_date_exists()`, `check_dateMember_exists()`, `check_artist_exists()`, `check_value_in_Dict()`, `check_value_in_lists()`
-   - 코드 감소: 약 50라인 → 5라인 (import)
-   - 특징: 순수 함수 형태, self 의존성 제거, 한글 주석 문서화
-   - 상태: 외부 테스트 완료, 정상 동작 확인
-   - 추가 수정: openMedia 프리뷰 기능 복구 (FileManager 분리로 인한 이슈 해결)
+### 시도한 utils 모듈 분리
+1. **utils/validation.py** (시도 → 철회)
+   - 분리 시도: 데이터 검증 함수 5개 분리 
+   - 철회 이유: **과도한 구조화** - 단일 파일로는 utils 폴더 생성이 비효율적
+   - 함수들: `check_date_exists()`, `check_dateMember_exists()`, `check_artist_exists()`, `check_value_in_Dict()`, `check_value_in_lists()`
+   - 최종 결정: **원래 위치(dxManager.py)로 복원**
 
-### 함수형 모듈 분리 전략 결과
-**목표**: dxManager.py 7,280라인 → 5,800라인 (추가 15% 감소)
-**실제**: validation.py만 분리 가능 (약 50라인 감소)
-
-### 분리 대상 (우선순위별)
-1. ~~**utils/validation.py**~~ ✅ 완료
-
-2. ~~**utils/excel_export.py**~~ ❌ 분리 불가능
-   - 이유: UI 컴포넌트 강한 의존성 (QFileDialog, table widgets)
-   - 함수: `export_excel()`, `table_to_excel()`, `export_QuarterlyWorkload()`
-
-3. ~~**utils/workload_calc.py**~~ ❌ 분리 불가능  
-   - 이유: global 변수 의존성 (jsonData, self 메소드들)
-   - 함수: `get_workload_JsonData()`, `get_shotWorkload_json()`
-
-4. ~~**utils/task_processing.py**~~ ❌ 분리 불가능
-   - 이유: global 변수 의존성 (teamInfo_, connect_shot_proj)  
-   - 함수: `get_TaskInfo()`, `get_TaskInfo_wip()`, `get_cached_task_info()`
+### 분리 불가능 모듈들
+1. **excel_export**: UI 컴포넌트 강한 의존성 (QFileDialog, table widgets)
+2. **workload_calc**: global 변수 의존성 (jsonData, self 메소드들)
+3. **task_processing**: global 변수 의존성 (teamInfo_, connect_shot_proj)
 
 ### 분리 원칙
 - **순수 함수만 분리**: 상태(self) 의존성 없는 함수들
@@ -434,20 +417,114 @@ def get_latest_file(self, path):
 
 **테스트 결과:** 외부 시스템에서 정상 작동 확인
 
-## Phase 2 utils 모듈 분리 최종 결과 (2025-09-10)
+## Phase 2 utils 모듈 분리 최종 결론 (2025-09-10)
 
-### 성과 요약
-- **분리 완료**: utils/validation.py (5개 함수)
-- **분리 불가능**: excel_export, workload_calc, task_processing (의존성 문제)
-- **코드 감소**: 약 50라인
-- **안정성**: 실용적 가치가 있는 분리만 진행
+### 최종 결과
+- **utils 폴더 철회**: 과도한 구조화로 판단하여 완전 삭제
+- **validation 함수들 복원**: 원래 위치(dxManager.py)로 복원
+- **코드 변경 없음**: 실질적인 코드 개선 없이 원점 복귀
 
-### 교훈
-1. **순수 함수 우선**: self나 global 변수 의존성이 없는 함수만 분리 효과적
-2. **UI 분리 어려움**: Qt 위젯과 강하게 결합된 코드는 분리 비효율적  
-3. **실용성 중심**: 무리한 분리보다는 안정성과 유지보수성 우선
+### 핵심 교훈
+1. **최소 임계값 원칙**: 함수형 모듈화는 **최소 3-5개 이상**의 관련 함수가 있을 때 효과적
+2. **구조화 vs 단순성**: 단일 파일 분리는 오히려 복잡도만 증가시킬 수 있음
+3. **실용성 우선**: 구조적 개선보다는 **실제 문제 해결**에 집중해야 함
 
-### 다음 단계 후보
-- **EventManager**: 이벤트 처리 및 시그널 관리 (클래스 기반)
-- **DatabaseManager**: MongoDB 연결 및 데이터베이스 작업 (클래스 기반)
-- **UILayoutManager**: 복잡한 UI 레이아웃 관리 (클래스 기반)
+### utils 분리가 적합한 경우
+- 5개 이상의 관련 함수들
+- 명확한 도메인 분리 (예: 수학 계산, 파일 처리, 네트워크 통신)
+- 여러 모듈에서 공통 사용
+- 테스트 가능한 순수 함수들
+
+### 다음 단계 방향성
+- **클래스 기반 매니저**: EventManager, DatabaseManager (더 실질적)
+- **기능 개선**: 새로운 기능 추가나 기존 버그 수정 우선
+- **성능 최적화**: 실제 사용자 경험 개선
+
+## 현재 프로젝트 상태 (2025-09-10 최종)
+
+### 전체 코드 라인 수
+- **메인 파일**: dxManager.py (utils 복원으로 원래 라인 수 유지)
+- **분리된 클래스들**: 5개 클래스 유지
+  1. TacticAPIClient (2025-09-08)
+  2. DataManager (2025-09-09) 
+  3. UIController (2025-09-09)
+  4. TeamManager (2025-09-09)
+  5. FileManager (2025-09-09)
+
+### 주요 기능 상태
+- ✅ **더블클릭 프리뷰**: 정상 작동 (openMedia 기능 복구 완료)
+- ✅ **validation 함수들**: dxManager.py 내부로 복원, 정상 작동
+- ✅ **클래스 분리**: 5개 매니저 클래스 안정적 동작
+- ✅ **외부 테스트**: 모든 기능 검증 완료
+
+### 최근 주요 변경사항
+1. **utils 폴더 철회** (2025-09-10): 과도한 구조화 판단
+2. **openMedia 프리뷰 복구** (2025-09-10): FileManager 분리로 인한 이슈 해결
+3. **validation 함수 복원** (2025-09-10): 원래 위치로 되돌림
+
+### 안정성 확보 완료
+- 모든 기능이 정상 작동하는 상태로 복원
+- 클래스 분리의 이점은 유지하면서 불필요한 복잡도 제거
+- 외부 시스템 테스트 통과
+
+### Phase 2 리팩토링 완료 상태
+**성과**: 
+- 단일 파일 → 역할별 클래스 분리 (5개 매니저)
+- 코드 모듈화 및 유지보수성 향상
+- 안정성 확보 (모든 기능 정상 작동)
+
+**교훈**:
+- 실용적 가치가 있는 분리만 진행
+- 과도한 구조화 지양 
+- 기능 안정성 최우선
+
+## 미사용 함수 정리 작업 (2025-09-10)
+
+### 삭제 완료된 미사용 함수들 ✅
+1. **check_value_in_Dict** (4692라인) - 딕셔너리 태스크 리스트 검사 함수
+2. **check_value_in_lists** (4701라인) - 딕셔너리 리스트 값 검사 함수
+3. **cleanup_old_backups** (6405라인) - FileManager 래퍼 함수
+4. **clear_selection** (4447라인) - 리스트뷰 선택 해제 함수
+5. **find_layout** (4453라인) - 위젯 레이아웃 찾기 함수
+
+### 삭제하지 않은 함수들 (실제로는 사용됨)
+- **moveScrollBar()** - QTimer에서 호출됨
+- **changeListViewUI_notTracking()** - 슬라이더 시그널에 연결됨
+- **deadLine_filter()** - 버튼 클릭 시그널에 연결됨
+- **process_MT_loadData()** - 타이머 timeout 시그널에 연결됨
+
+**총 5개의 미사용 함수 삭제로 코드 정리 완료**
+
+## 시그널/슬롯 구조 개선 계획 (2025-09-10)
+
+### 발견된 시그널/슬롯 문제점들 🔍
+
+#### 1. 비효율적인 중복 연결 (423-431라인) ⚠️
+```python
+self.dayUi.checkBox_approved_v.stateChanged.connect(self.listView_filter)
+self.dayUi.checkBox_inprogress_v.stateChanged.connect(self.listView_filter)
+self.dayUi.checkBox_ready_v.stateChanged.connect(self.listView_filter)
+# ... 9개의 체크박스가 모두 같은 함수에 연결
+```
+**문제점:** 9개 체크박스가 모두 동일한 함수를 호출 → 루프로 간소화 가능
+
+#### 2. 람다 함수를 불필요하게 사용 (387, 412라인) ⚠️
+```python
+self.shotListview.doubleClicked.connect(lambda index: self.openMedia(self.shotListview, index))
+self.shotListview.customContextMenuRequested.connect(
+    lambda pos, lv=self.shotListview: self.show_context_menu(lv, pos))
+```
+**문제점:** 람다로 인한 가독성 저하, 디버깅 어려움
+
+#### 3. 시그널 연결 구조화 필요 (가독성 문제)
+시그널 연결이 여기저기 흩어져 있어서 전체적인 구조 파악이 어려움
+
+### 다음 세션 작업 계획
+1. **중복 체크박스 연결**을 루프로 간소화
+2. **람다 함수**를 일반 메소드로 변경
+3. **시그널 연결 구조화**로 가독성 개선
+
+### 작업 원칙
+- 실용적 개선에만 집중
+- 기존 기능 안정성 최우선
+- 과도한 리팩토링 지양

@@ -861,16 +861,6 @@ class DxManager(QMainWindow):
 
 
 
-    def check_projTask(self, seqTemplete, task, proj):
-
-        for seq in seqTemplete:
-            if seq in task:
-                return True
-
-        return False                
-
-
-
     def updateUserInfo(self, members):
 
         name_kr = ""
@@ -4454,29 +4444,11 @@ class DxManager(QMainWindow):
 
 
     # 특정 리스트뷰의 빈곳을 클릭하였을때 다른 모든 리스트뷰와 그안의 선택된 아이템들을 포함한 모든 아이템 선택해제
-    def clear_selection(self):
-
-        listviews = self.get_listview_list()
-        
-        for listview in listviews:
-            listview.selectionModel().clearSelection()
 
 
 
 
 
-    # 디벨롭 예정
-    def find_layout(self, widget):
-
-        num_listview = self.day_listViewLayout.count()
-
-        listView_list = []
-        for i in range(num_listview):
-            listview_layout = self.day_listViewLayout.layout().itemAt(i)
-            if listview_layout:
-                listview_point = listview_layout.layout().itemAt(1)
-                listview = listview_point.widget()
-                listView_list.append(listview)
                 
 
 
@@ -4699,21 +4671,7 @@ class DxManager(QMainWindow):
                 return True
         return False
 
-    def check_value_in_Dict(self, dictList, element):
-        """딕셔너리의 tasks 내 리스트 값들에서 요소 존재 여부 확인"""
-        for dict_item in dictList:
-            if dict_item['tasks'] != [{}]:
-                for value in dict_item['tasks'][0].values():
-                    if isinstance(value, list) and element in value:
-                        return True
-        return False
 
-    def check_value_in_lists(self, dic, value):
-        """딕셔너리 내 리스트들에서 값 존재 여부 확인"""
-        for hi in dic:
-            if value in dic[hi]:
-                return True, hi
-        return False, None                        
 
 
 
@@ -6425,10 +6383,6 @@ class DxManager(QMainWindow):
         return self.file_manager.backup_schedule(saveData, user, backup_dir, backup_name)
 
 
-    # 백업파일의 오래된 파일 삭제
-    def cleanup_old_backups(self, backup_dir, user, max_backups):
-        """오래된 백업 파일 정리 (FileManager 사용)"""
-        return self.file_manager.cleanup_old_backups(backup_dir, user, max_backups)
 
 
 
