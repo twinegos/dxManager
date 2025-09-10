@@ -354,16 +354,23 @@ test -d /opt/stdrepo/ANI/Artist/Moon_sungoh/dxManager_sh && echo "경로 접근 
 3. ✅ **의존성 최소화**: 독립성 높은 기능부터 분리
 4. ✅ **실용적 가치**: 실질적 이익이 있는 분리만 진행
 
-## 다음 작업 계획 (2025-09-10 예정)
+## Phase 2 utils 모듈 분리 진행 (2025-09-10)
 
-### 함수형 모듈 분리 전략
-**목표**: dxManager.py 7,280라인 → 5,800라인 (추가 20% 감소)
+### 완료된 utils 모듈 분리
+1. **utils/validation.py** ✅ (2025-09-10 완료)
+   - 위치: `utils/validation.py`
+   - 기능: 데이터 검증 함수들 분리
+   - 분리된 함수: `check_date_exists()`, `check_dateMember_exists()`, `check_artist_exists()`, `check_value_in_Dict()`, `check_value_in_lists()`
+   - 코드 감소: 약 50라인 → 5라인 (import)
+   - 특징: 순수 함수 형태, self 의존성 제거, 한글 주석 문서화
+   - 상태: 외부 테스트 완료, 정상 동작 확인
+   - 추가 수정: openMedia 프리뷰 기능 복구 (FileManager 분리로 인한 이슈 해결)
+
+### 함수형 모듈 분리 전략 (계속)
+**목표**: dxManager.py 7,280라인 → 5,800라인 (추가 15% 감소)
 
 ### 분리 대상 (우선순위별)
-1. **utils/validation.py** - 데이터 검증 함수들
-   - `check_date_exists()`, `check_dateMember_exists()`, `check_artist_exists()`
-   - `check_value_in_Dict()`, `check_value_in_lists()`
-   - 예상 라인 감소: 80라인 → 20라인
+1. ~~**utils/validation.py**~~ ✅ 완료
 
 2. **utils/excel_export.py** - 엑셀 처리 함수들
    - `export_excel()`, `table_to_excel()`, `export_QuarterlyWorkload()`
@@ -399,7 +406,29 @@ dxManager/
 ```
 
 ### 진행 순서
-1. validation.py 생성 및 테스트
-2. 기존 메소드들을 함수 호출로 변경
-3. 외부 시스템 테스트
-4. 다음 모듈 진행
+1. ~~validation.py 생성 및 테스트~~ ✅ 완료
+2. ~~기존 메소드들을 함수 호출로 변경~~ ✅ 완료  
+3. ~~외부 시스템 테스트~~ ✅ 완료
+4. 다음 모듈 진행 (excel_export.py)
+
+## 주요 이슈 해결 기록 (2025-09-10)
+
+### openMedia 프리뷰 기능 이슈 해결
+**문제:** validation.py 분리 작업 중 더블클릭 프리뷰가 작동하지 않는 현상 발견
+**원인 분석:** FileManager 분리 시 get_latest_file() 메소드 동작 변경
+- 이전: 파일 찾기 + 프리뷰 실행까지 담당
+- 분리 후: 파일 찾기만 담당 (프리뷰 실행 로직 누락)
+
+**해결책:** dxManager.py의 get_latest_file() 메소드에 프리뷰 실행 로직 복원
+```python
+def get_latest_file(self, path):
+    latest_file = self.file_manager.get_latest_file(path)
+    # 프리뷰 실행 로직 추가
+    if os.path.isdir(latest_file):
+        subprocess.run(["xdg-open", str(latest_file)], check=True)
+    elif latest_file.lower().endswith((".mov", ".mp4", ".jpg", "jpeg", "png", "exr")):
+        cmd = ["/backstage/dcc/DCC", "rez-env", "rv-1.0.0", "--", "rv", latest_file]
+        # rv 실행
+```
+
+**테스트 결과:** 외부 시스템에서 정상 작동 확인
