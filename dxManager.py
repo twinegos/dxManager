@@ -90,10 +90,6 @@ from data_manager import DataManager
 from ui_controller import UIController
 from team_manager import TeamManager
 from file_manager import FileManager
-from utils.validation import (
-    check_date_exists, check_dateMember_exists, check_artist_exists,
-    check_value_in_Dict, check_value_in_lists
-)
 
 userID = config.get_user_id()
 
@@ -1844,7 +1840,7 @@ class DxManager(QMainWindow):
                     taskList.append(scheduleData)
 
 
-                elif  (check_date_exists(taskList, scheduleData) == False):
+                elif  (self.check_date_exists(taskList, scheduleData) == False):
                         taskList.append(scheduleData)
 
 
@@ -1866,12 +1862,12 @@ class DxManager(QMainWindow):
                 for addTask in taskList:
                     if jsonData != []:
                         # 날짜가 존재하는지 확인후 존재하지 않으면 스케쥴에 추가
-                        if  (check_date_exists(jsonData, addTask) == False):
+                        if  (self.check_date_exists(jsonData, addTask) == False):
                             jsonData.append(addTask)
 
         
                         # 날짜가 존재하고 아티스트도 같은 태스크가 존재할 경우 
-                        elif (check_dateMember_exists(jsonData, addTask) == True):# and check_artist_exists(jsonData, addTask) == True):
+                        elif (self.check_dateMember_exists(jsonData, addTask) == True):# and self.check_artist_exists(jsonData, addTask) == True):
                             for data in jsonData:
                                 if data["artist"] == addTask["artist"] and data["year"] == addTask["year"] and data["month"] == addTask["month"] and data["day"] == addTask["day"]:# and data["tasks"] != scheduleData["tasks"]:
                                     if project in data["tasks"][0]:
@@ -4668,7 +4664,7 @@ class DxManager(QMainWindow):
                                             jsonData.append(task_data)
 
                         elif  (task_data not in jsonData): 
-                            if ((check_date_exists(jsonData, task_data) == False) or (data["artist"] != member)):
+                            if ((self.check_date_exists(jsonData, task_data) == False) or (data["artist"] != member)):
                                 jsonData.append(task_data)
 
         self.refereshListViews( direction, jsonData)
@@ -4677,7 +4673,47 @@ class DxManager(QMainWindow):
         return jsonData
 
 
-    # Validation functions moved to utils/validation.py                        
+    def check_date_exists(self, json_dicts, task_dict):
+        """딕셔너리 리스트에서 날짜 존재 여부 확인"""
+        for dict_item in json_dicts:
+            if (dict_item['year'] == task_dict['year'] and
+                dict_item['month'] == task_dict['month'] and
+                dict_item['day'] == task_dict['day']):
+                return True
+        return False
+
+    def check_dateMember_exists(self, json_dicts, task_dict):
+        """딕셔너리 리스트에서 날짜와 멤버 조합 존재 여부 확인"""
+        for dict_item in json_dicts:
+            if (dict_item['year'] == task_dict['year'] and
+                dict_item['month'] == task_dict['month'] and
+                dict_item['day'] == task_dict['day'] and
+                dict_item["artist"] == task_dict["artist"]):
+                return True
+        return False
+
+    def check_artist_exists(self, json_dicts, task_dict):
+        """딕셔너리 리스트에서 아티스트 존재 여부 확인"""
+        for dict_item in json_dicts:
+            if (dict_item['artist'] == task_dict['artist']):
+                return True
+        return False
+
+    def check_value_in_Dict(self, dictList, element):
+        """딕셔너리의 tasks 내 리스트 값들에서 요소 존재 여부 확인"""
+        for dict_item in dictList:
+            if dict_item['tasks'] != [{}]:
+                for value in dict_item['tasks'][0].values():
+                    if isinstance(value, list) and element in value:
+                        return True
+        return False
+
+    def check_value_in_lists(self, dic, value):
+        """딕셔너리 내 리스트들에서 값 존재 여부 확인"""
+        for hi in dic:
+            if value in dic[hi]:
+                return True, hi
+        return False, None                        
 
 
 

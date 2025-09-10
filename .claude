@@ -366,23 +366,24 @@ test -d /opt/stdrepo/ANI/Artist/Moon_sungoh/dxManager_sh && echo "경로 접근 
    - 상태: 외부 테스트 완료, 정상 동작 확인
    - 추가 수정: openMedia 프리뷰 기능 복구 (FileManager 분리로 인한 이슈 해결)
 
-### 함수형 모듈 분리 전략 (계속)
+### 함수형 모듈 분리 전략 결과
 **목표**: dxManager.py 7,280라인 → 5,800라인 (추가 15% 감소)
+**실제**: validation.py만 분리 가능 (약 50라인 감소)
 
 ### 분리 대상 (우선순위별)
 1. ~~**utils/validation.py**~~ ✅ 완료
 
-2. **utils/excel_export.py** - 엑셀 처리 함수들
-   - `export_excel()`, `table_to_excel()`, `export_QuarterlyWorkload()`
-   - 예상 라인 감소: 120라인 → 40라인
+2. ~~**utils/excel_export.py**~~ ❌ 분리 불가능
+   - 이유: UI 컴포넌트 강한 의존성 (QFileDialog, table widgets)
+   - 함수: `export_excel()`, `table_to_excel()`, `export_QuarterlyWorkload()`
 
-3. **utils/workload_calc.py** - 워크로드 계산 함수들
-   - `get_workload_JsonData()`, `get_shotWorkload_json()`
-   - 예상 라인 감소: 100라인 → 30라인
+3. ~~**utils/workload_calc.py**~~ ❌ 분리 불가능  
+   - 이유: global 변수 의존성 (jsonData, self 메소드들)
+   - 함수: `get_workload_JsonData()`, `get_shotWorkload_json()`
 
-4. **utils/task_processing.py** - 태스크 처리 함수들
-   - `get_TaskInfo()`, `get_TaskInfo_wip()`, `get_cached_task_info()`
-   - 예상 라인 감소: 150라인 → 50라인
+4. ~~**utils/task_processing.py**~~ ❌ 분리 불가능
+   - 이유: global 변수 의존성 (teamInfo_, connect_shot_proj)  
+   - 함수: `get_TaskInfo()`, `get_TaskInfo_wip()`, `get_cached_task_info()`
 
 ### 분리 원칙
 - **순수 함수만 분리**: 상태(self) 의존성 없는 함수들
@@ -432,3 +433,21 @@ def get_latest_file(self, path):
 ```
 
 **테스트 결과:** 외부 시스템에서 정상 작동 확인
+
+## Phase 2 utils 모듈 분리 최종 결과 (2025-09-10)
+
+### 성과 요약
+- **분리 완료**: utils/validation.py (5개 함수)
+- **분리 불가능**: excel_export, workload_calc, task_processing (의존성 문제)
+- **코드 감소**: 약 50라인
+- **안정성**: 실용적 가치가 있는 분리만 진행
+
+### 교훈
+1. **순수 함수 우선**: self나 global 변수 의존성이 없는 함수만 분리 효과적
+2. **UI 분리 어려움**: Qt 위젯과 강하게 결합된 코드는 분리 비효율적  
+3. **실용성 중심**: 무리한 분리보다는 안정성과 유지보수성 우선
+
+### 다음 단계 후보
+- **EventManager**: 이벤트 처리 및 시그널 관리 (클래스 기반)
+- **DatabaseManager**: MongoDB 연결 및 데이터베이스 작업 (클래스 기반)
+- **UILayoutManager**: 복잡한 UI 레이아웃 관리 (클래스 기반)
