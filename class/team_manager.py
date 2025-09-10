@@ -8,6 +8,7 @@ dxManager에서 팀 관리 관련 기능들을 분리한 클래스입니다.
 import os
 import json
 import logging
+from utils.validation import check_value_in_lists
 from PySide2.QtGui import QStandardItem, QStandardItemModel
 from PySide2.QtCore import Qt
 
@@ -105,7 +106,7 @@ class TeamManager:
                 hierarchy[hi] = [item.text()]
             else:
                 # 현재 아이템이 전체 멤버하이라키에 존재하는지 확인, 상위 하이라키에 존재하면 하이라키 넘버(dup_hi) 반환
-                check_exist, dup_hi = self.main_window.check_value_in_lists(hierarchy, item.text())
+                check_exist, dup_hi = check_value_in_lists(hierarchy, item.text())
 
                 # 상위 하이라키에 존재하는 경우, 가 상위 하이라키에서 멤버 삭제
                 if dup_hi is not None: 

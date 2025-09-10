@@ -90,6 +90,10 @@ from data_manager import DataManager
 from ui_controller import UIController
 from team_manager import TeamManager
 from file_manager import FileManager
+from utils.validation import (
+    check_date_exists, check_dateMember_exists, check_artist_exists,
+    check_value_in_Dict, check_value_in_lists
+)
 
 userID = config.get_user_id()
 
@@ -570,8 +574,22 @@ class DxManager(QMainWindow):
 
 
     def get_latest_file(self, path):
-        """최신 파일 가져오기 (FileManager 사용)"""
-        return self.file_manager.get_latest_file(path)
+        """최신 파일 가져오기 및 프리뷰 실행 (FileManager 사용)"""
+        latest_file = self.file_manager.get_latest_file(path)
+        
+        if not latest_file:
+            QMessageBox.information(None, "알 림", "프리뷰가 존재하지 않습니다.")
+            return
+            
+        # 프리뷰 실행
+        import subprocess
+        
+        if os.path.isdir(latest_file):
+            subprocess.run(["xdg-open", str(latest_file)], check=True)
+        elif os.path.isfile(latest_file) and latest_file.lower().endswith((".mov", ".mp4", ".jpg", "jpeg", "png", "exr")):
+            cmd = ["/backstage/dcc/DCC", "rez-env", "rv-1.0.0", "--", "rv", latest_file]
+            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            stdout, stderr = process.communicate()
 
 
 
@@ -1826,7 +1844,7 @@ class DxManager(QMainWindow):
                     taskList.append(scheduleData)
 
 
-                elif  (self.check_date_exists(taskList, scheduleData) == False):
+                elif  (check_date_exists(taskList, scheduleData) == False):
                         taskList.append(scheduleData)
 
 
@@ -1848,12 +1866,12 @@ class DxManager(QMainWindow):
                 for addTask in taskList:
                     if jsonData != []:
                         # 날짜가 존재하는지 확인후 존재하지 않으면 스케쥴에 추가
-                        if  (self.check_date_exists(jsonData, addTask) == False):
+                        if  (check_date_exists(jsonData, addTask) == False):
                             jsonData.append(addTask)
 
         
                         # 날짜가 존재하고 아티스트도 같은 태스크가 존재할 경우 
-                        elif (self.check_dateMember_exists(jsonData, addTask) == True):# and self.check_artist_exists(jsonData, addTask) == True):
+                        elif (check_dateMember_exists(jsonData, addTask) == True):# and check_artist_exists(jsonData, addTask) == True):
                             for data in jsonData:
                                 if data["artist"] == addTask["artist"] and data["year"] == addTask["year"] and data["month"] == addTask["month"] and data["day"] == addTask["day"]:# and data["tasks"] != scheduleData["tasks"]:
                                     if project in data["tasks"][0]:
@@ -4650,7 +4668,7 @@ class DxManager(QMainWindow):
                                             jsonData.append(task_data)
 
                         elif  (task_data not in jsonData): 
-                            if ((self.check_date_exists(jsonData, task_data) == False) or (data["artist"] != member)):
+                            if ((check_date_exists(jsonData, task_data) == False) or (data["artist"] != member)):
                                 jsonData.append(task_data)
 
         self.refereshListViews( direction, jsonData)
@@ -4659,40 +4677,7 @@ class DxManager(QMainWindow):
         return jsonData
 
 
-    def check_date_exists(self, json_dicts, task_dict):
-        for dict_item in json_dicts:
-            if (dict_item['year'] == task_dict['year']and
-                dict_item['month'] == task_dict['month']and
-                dict_item['day'] == task_dict['day']):
-                return True
-        return False
-
-
-    def check_dateMember_exists(self, json_dicts, task_dict):
-        for dict_item in json_dicts:
-            if (dict_item['year'] == task_dict['year']and
-                dict_item['month'] == task_dict['month']and
-                dict_item['day'] == task_dict['day']and
-                dict_item["artist"] == task_dict["artist"]):
-                return True
-        return False
-
-
-    def check_artist_exists(self, json_dicts, task_dict):
-        for dict_item in json_dicts:
-            if (dict_item['artist'] == task_dict['artist']):
-                return True
-        return False
-     
-
-    def check_value_in_Dict(self, dictList, element):
-        for dict in dictList:
-            if dict['tasks'] != [{}]:
-                for key,value in dict['tasks'][0].items():
-                    if isinstance(value, list) and element in value:
-                        return True
-
-        return False                        
+    # Validation functions moved to utils/validation.py                        
 
 
 
@@ -6142,11 +6127,7 @@ class DxManager(QMainWindow):
 
 
     # 리스트를 값으로 가지고 있는 딕셔너리 안에 특정 값이 존재하는지 확인하는 메서드
-    def check_value_in_lists(self, dic, value):
-        for hi in dic:
-            if value in dic[hi]:
-                return True, hi
-        return False, None
+    # check_value_in_lists moved to utils/validation.py
 
 
 
