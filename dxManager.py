@@ -4675,6 +4675,13 @@ class DxManager(QMainWindow):
 
 
 
+    def check_value_in_lists(self, dic, value):
+        """딕셔너리 내 리스트들에서 값 존재 여부 확인"""
+        for hi in dic:
+            if value in dic[hi]:
+                return True, hi
+        return False, None
+
     def check__Task_data(self, taskData, filterDate_tasks):
 
         if taskData["tasks"][0]:
