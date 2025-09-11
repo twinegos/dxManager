@@ -341,65 +341,103 @@ class DxManager(QMainWindow):
         # self.db_manager.connect()
 
 
-        # 컨트롤러 속성 연결
-        self.menu_Edit.triggered.connect(self.showMemberEditDialog)
+        # =================================================
+        # 타이머 객체 초기화 (시그널 연결 전에 생성)
+        # =================================================
+        self._setup_timers()
+        
+        # =================================================
+        # 시그널/슬롯 연결 설정
+        # =================================================
+        self._setup_signal_connections()
 
-        self.forwardDayBtn.clicked.connect(self.forwardDay)
-        self.backwardDayBtn.clicked.connect(self.backwardDay)
-        self.scheduleViewBtn.clicked.connect(self.showScheduleFrame)
-        self.dashboardViewBtn.clicked.connect(self.showDashboardFrame)
-        self.dataInfoBtn.clicked.connect(self.showWorkdataWin)
-        self.ui.sortBtn_name.clicked.connect(self.sort_by_taskName)
-        self.ui.sortBtn_status.clicked.connect(self.sort_by_status)
-        self.ui.sortBtn_part.clicked.connect(self.sort_by_part)
-        self.ui.sortBtn_proj.clicked.connect(self.sort_by_proj)
-
-        self.comboDay.currentIndexChanged.connect(self.changeComboDate)
-        self.comboMonth.currentIndexChanged.connect(self.changeComboDate)
-        self.comboYear.currentIndexChanged.connect(self.changeComboDate)
-
-        self.projSelection_model.selectionChanged.connect(self.process_sel_project) 
-        self.saveButton.clicked.connect(self.saveFile)        
-        self.teamTreeModel.dataChanged.connect(self.handle_item_state_change)
-
-
-        # 멤버트리뷰의 클릭/더블클릭 겹침방지를 위한 타이머 객체 설정 ###################
+    def _setup_timers(self):
+        """타이머 객체들을 초기화"""
+        # 멤버트리뷰의 클릭/더블클릭 겹침방지를 위한 타이머 객체 설정
         self.click_timer = QTimer()
         self.click_timer.setSingleShot(True)
         self.pending_click = None
-        self.checkArea_click = 0 # 클릭한 위치가 체크박스영역인지 텍스트 영역인지 확인
-        ##############################################################################
-
-
-        self.memberStatusDialog = None # 다이얼로그 객체 초기화
-        self.teamTree.clicked.connect(self.on_item_clicked) # 체크박스를 정확히 클릭하지 않고 이름을 클릭해도 태스크 리스트를 읽어오도록 함.
-        self.teamTree.doubleClicked.connect(self.show_status_manday)        
-
-        self.ui.deadlineButton.clicked.connect(self.deadLine_filter) # 이번주 완료예정인 태스크만 보이도록 함
-        self.ui.reload_Button.clicked.connect(self.referesh_manager) # 전체 새로고침
-
-        self.click_timer.timeout.connect(self.singleClick_select_member)
-
-
-        self.taskInfomationDialog = None # 다이얼로그 객체 초기화
-        self.editMandays = None # 맨데이 편집창 객체 초기화
-
-        self.shotListview.doubleClicked.connect(lambda index: self.openMedia(self.shotListview, index))
-
-        artist = self.artistLabel.text()
-
-
-
+        self.checkArea_click = 0  # 클릭한 위치가 체크박스영역인지 텍스트 영역인지 확인
+        
+        # 슬라이더 타이머 설정
         self.sliderTimer = QTimer()
         self.sliderTimer.setInterval(0)
         self.sliderTimer.setSingleShot(True)
         self.last_value = self.listViewSlider.value()
 
-
+    def _setup_signal_connections(self):
+        """시그널과 슬롯을 기능별로 그룹화하여 연결"""
+        
+        # 1. 메뉴 및 기본 버튼 연결
+        self.menu_Edit.triggered.connect(self.showMemberEditDialog)
+        self.saveButton.clicked.connect(self.saveFile)
+        
+        # 2. 네비게이션 버튼 연결
+        self.forwardDayBtn.clicked.connect(self.forwardDay)
+        self.backwardDayBtn.clicked.connect(self.backwardDay)
+        self.todayBtn.clicked.connect(self.move_TodayListview)
+        
+        # 3. 뷰 전환 버튼 연결
+        self.scheduleViewBtn.clicked.connect(self.showScheduleFrame)
+        self.dashboardViewBtn.clicked.connect(self.showDashboardFrame)
+        self.dataInfoBtn.clicked.connect(self.showWorkdataWin)
+        
+        # 4. 정렬 버튼 연결
+        self.ui.sortBtn_name.clicked.connect(self.sort_by_taskName)
+        self.ui.sortBtn_status.clicked.connect(self.sort_by_status)
+        self.ui.sortBtn_part.clicked.connect(self.sort_by_part)
+        self.ui.sortBtn_proj.clicked.connect(self.sort_by_proj)
+        
+        # 5. 날짜 콤보박스 연결
+        self.comboDay.currentIndexChanged.connect(self.changeComboDate)
+        self.comboMonth.currentIndexChanged.connect(self.changeComboDate)
+        self.comboYear.currentIndexChanged.connect(self.changeComboDate)
+        
+        # 6. 모델 및 데이터 연결
+        self.projSelection_model.selectionChanged.connect(self.process_sel_project)
+        self.teamTreeModel.dataChanged.connect(self.handle_item_state_change)
+        
+        # 7. 필터 및 기능 버튼 연결
+        self.ui.deadlineButton.clicked.connect(self.deadLine_filter)
+        self.ui.reload_Button.clicked.connect(self.referesh_manager)
+        
+        # 8. 팀 트리뷰 연결
+        self.teamTree.clicked.connect(self.on_item_clicked)
+        self.teamTree.doubleClicked.connect(self.show_status_manday)
+        self.teamTree.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.teamTree.customContextMenuRequested.connect(self.member_context_menu)
+        
+        # 9. 샷 리스트뷰 연결
+        self.shotListview.doubleClicked.connect(lambda index: self.openMedia(self.shotListview, index))
+        self.shotListview.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.shotListview.customContextMenuRequested.connect(
+            lambda pos, lv=self.shotListview: self.show_context_menu(lv, pos))
+        
+        # 10. 슬라이더 연결
         self.listViewSlider.valueChanged.connect(self.setListviewLineEdit)
-
         self.listViewSlider.sliderReleased.connect(self.changeListViewUI_notTracking)
+        
+        # 11. 타이머 연결
+        self.click_timer.timeout.connect(self.singleClick_select_member)
+        
+        # 12. 리스트뷰 필터 체크박스 연결
+        filter_checkboxes = [
+            'checkBox_approved_v', 'checkBox_inprogress_v', 'checkBox_ready_v',
+            'checkBox_review_v', 'checkBox_hold_v', 'checkBox_ok_v', 
+            'checkBox_wait_v', 'checkBox_omit_v', 'checkBox_retake_v'
+        ]
+        for checkbox_name in filter_checkboxes:
+            checkbox = getattr(self.dayUi, checkbox_name)
+            checkbox.stateChanged.connect(self.listView_filter)
 
+
+
+
+        self.memberStatusDialog = None # 다이얼로그 객체 초기화
+        self.taskInfomationDialog = None # 다이얼로그 객체 초기화
+        self.editMandays = None # 맨데이 편집창 객체 초기화
+
+        artist = self.artistLabel.text()
         # 초기 기본 5개의 리스트뷰 생성
         self.setUp_listViewUI()
 
@@ -407,28 +445,6 @@ class DxManager(QMainWindow):
         if not jsonData:
             self.makeInit_data(currentPath, userID)
 
-        # 샷 리스트뷰에 컨텍스트 메뉴 연결
-        self.shotListview.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.shotListview.customContextMenuRequested.connect(
-            lambda pos, lv=self.shotListview: self.show_context_menu(lv, pos))
-
-        # 팀 트리뷰에 컨텍스트 메뉴 연결
-        self.teamTree.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.teamTree.customContextMenuRequested.connect(self.member_context_menu)
-
-        # 오늘날짜로 스케쥴 리스트뷰 갱신
-        self.todayBtn.clicked.connect(self.move_TodayListview)
-
-        # 리스트뷰의 뷰필터 
-        self.dayUi.checkBox_approved_v.stateChanged.connect(self.listView_filter)
-        self.dayUi.checkBox_inprogress_v.stateChanged.connect(self.listView_filter)
-        self.dayUi.checkBox_ready_v.stateChanged.connect(self.listView_filter)
-        self.dayUi.checkBox_review_v.stateChanged.connect(self.listView_filter)
-        self.dayUi.checkBox_hold_v.stateChanged.connect(self.listView_filter)
-        self.dayUi.checkBox_ok_v.stateChanged.connect(self.listView_filter)
-        self.dayUi.checkBox_wait_v.stateChanged.connect(self.listView_filter)
-        self.dayUi.checkBox_omit_v.stateChanged.connect(self.listView_filter)
-        self.dayUi.checkBox_retake_v.stateChanged.connect(self.listView_filter)
 
 
         # 진급, 및 부서이동으로 인한 개인정보 변경시 이를 적용하기 위한 쓰레드 실행
@@ -599,6 +615,7 @@ class DxManager(QMainWindow):
 
         self.dayUi.splitter.adjustSize()
         self.dayUi.scrollArea.adjustSize()
+
 
 
 

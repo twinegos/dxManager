@@ -495,36 +495,70 @@ def get_latest_file(self, path):
 
 **총 5개의 미사용 함수 삭제로 코드 정리 완료**
 
-## 시그널/슬롯 구조 개선 계획 (2025-09-10)
+## 시그널/슬롯 구조 개선 작업 완료 (2025-09-11)
 
-### 발견된 시그널/슬롯 문제점들 🔍
+### 완료된 개선사항 ✅
 
-#### 1. 비효율적인 중복 연결 (423-431라인) ⚠️
+#### 1. 중복 체크박스 연결 루프화 ✅ 
+**위치:** `dxManager.py:424-431` (`_setup_signal_connections` 메소드 내부)
 ```python
-self.dayUi.checkBox_approved_v.stateChanged.connect(self.listView_filter)
-self.dayUi.checkBox_inprogress_v.stateChanged.connect(self.listView_filter)
-self.dayUi.checkBox_ready_v.stateChanged.connect(self.listView_filter)
-# ... 9개의 체크박스가 모두 같은 함수에 연결
+# 12. 리스트뷰 필터 체크박스 연결
+filter_checkboxes = [
+    'checkBox_approved_v', 'checkBox_inprogress_v', 'checkBox_ready_v',
+    'checkBox_review_v', 'checkBox_hold_v', 'checkBox_ok_v', 
+    'checkBox_wait_v', 'checkBox_omit_v', 'checkBox_retake_v'
+]
+for checkbox_name in filter_checkboxes:
+    checkbox = getattr(self.dayUi, checkbox_name)
+    checkbox.stateChanged.connect(self.listView_filter)
 ```
-**문제점:** 9개 체크박스가 모두 동일한 함수를 호출 → 루프로 간소화 가능
+**개선 효과:** 9개 개별 연결 → 루프 구조로 간소화
 
-#### 2. 람다 함수를 불필요하게 사용 (387, 412라인) ⚠️
+#### 2. 시그널 연결 구조화 완료 ✅
+**메소드:** `_setup_signal_connections()` (dxManager.py:368라인)
+**구조:**
 ```python
-self.shotListview.doubleClicked.connect(lambda index: self.openMedia(self.shotListview, index))
-self.shotListview.customContextMenuRequested.connect(
-    lambda pos, lv=self.shotListview: self.show_context_menu(lv, pos))
+def _setup_signal_connections(self):
+    """시그널과 슬롯을 기능별로 그룹화하여 연결"""
+    
+    # 1. 메뉴 및 기본 버튼 연결
+    # 2. 네비게이션 버튼 연결  
+    # 3. 뷰 전환 버튼 연결
+    # 4. 정렬 버튼 연결
+    # 5. 날짜 콤보박스 연결
+    # 6. 모델 및 데이터 연결
+    # 7. 필터 및 기능 버튼 연결
+    # 8. 팀 트리뷰 연결
+    # 9. 샷 리스트뷰 연결
+    # 10. 슬라이더 연결
+    # 11. 타이머 연결
+    # 12. 리스트뷰 필터 체크박스 연결 (루프)
 ```
-**문제점:** 람다로 인한 가독성 저하, 디버깅 어려움
+**개선 효과:** 흩어진 시그널 연결들을 기능별로 그룹화하여 가독성 향상
 
-#### 3. 시그널 연결 구조화 필요 (가독성 문제)
-시그널 연결이 여기저기 흩어져 있어서 전체적인 구조 파악이 어려움
+#### 3. 타이머 초기화 분리 ✅
+**메소드:** `_setup_timers()` (dxManager.py:354라인)
+**개선 효과:** 타이머 객체 초기화를 별도 메소드로 분리하여 구조적 명확성 확보
 
-### 다음 세션 작업 계획
-1. **중복 체크박스 연결**을 루프로 간소화
-2. **람다 함수**를 일반 메소드로 변경
-3. **시그널 연결 구조화**로 가독성 개선
+### 남은 작업 (향후 진행 예정)
 
-### 작업 원칙
-- 실용적 개선에만 집중
-- 기존 기능 안정성 최우선
-- 과도한 리팩토링 지양
+#### 4. 람다 함수 개선 (보류 중) ⏸️
+**위치:** 
+- `dxManager.py:411` - shotListview.doubleClicked
+- `dxManager.py:3195` - listView_day.doubleClicked  
+- `dxManager.py:3870` - listView_day.doubleClicked
+
+**상태:** 사용자 요청에 따라 보류됨
+**계획:** 추후 별도 지시 시 람다 함수를 일반 메소드로 변경 예정
+
+### 작업 완료 상태
+- ✅ **중복 체크박스 연결** 루프로 간소화
+- ✅ **시그널 연결 구조화** 기능별 그룹화 완료
+- ✅ **타이머 초기화** 별도 메소드 분리
+- ⏸️ **람다 함수 개선** 사용자 요청으로 보류
+
+### 달성된 개선 효과
+1. **가독성 향상**: 시그널 연결을 기능별로 그룹화
+2. **유지보수성 개선**: 구조화된 메소드로 관리 용이성 확보
+3. **코드 간소화**: 중복 연결을 루프로 통합
+4. **구조적 명확성**: 타이머와 시그널 연결을 각각 분리된 메소드로 관리
