@@ -448,6 +448,85 @@ def get_latest_file(self, path):
 3. **실용성 중심**: 무리한 분리보다는 안정성과 유지보수성 우선
 
 ### 다음 단계 후보
-- **EventManager**: 이벤트 처리 및 시그널 관리 (클래스 기반)
+- **~~EventManager~~**: ✅ **완료됨** (2025-09-15)
 - **DatabaseManager**: MongoDB 연결 및 데이터베이스 작업 (클래스 기반)
 - **UILayoutManager**: 복잡한 UI 레이아웃 관리 (클래스 기반)
+
+## EventManager 구현 완료 (2025-09-15)
+
+### 개요
+이벤트 처리, 시그널/슬롯 연결, 타이머 관리를 담당하는 EventManager 클래스를 성공적으로 구현하여 dxManager.py의 이벤트 관련 로직을 분리했습니다.
+
+### 구현 내용
+
+#### Phase 1: 기본 클래스 구조 ✅
+- **위치**: dxManager.py 내부 (라인 123-245)
+- **기능**: EventManager 클래스 기본 구조 및 초기화
+- **초기화**: DxManager에서 EventManager 인스턴스 생성
+
+#### Phase 2: 이벤트 처리 메소드 분리 ✅
+단계적 접근으로 3개 주요 이벤트 메소드를 분리:
+
+1. **`handle_event_filter()`** - 이벤트 필터링 처리
+   - 팀 트리뷰 체크박스 클릭 감지
+   - 리스트뷰 포커스 관리
+   - 기존 `eventFilter()` 메소드를 EventManager 호출로 변경
+
+2. **`handle_key_press_event()`** - 키보드 이벤트 처리  
+   - Delete 키로 선택된 태스크 삭제
+   - 기존 `keyPressEvent()` 메소드를 EventManager 호출로 변경
+
+3. **`handle_drop_event()`** - 드래그앤드롭 이벤트 처리
+   - 샷 리스트뷰에서 스케줄 리스트뷰로 태스크 이동
+   - JSON 데이터 업데이트 및 색상 변경
+   - 기존 `get_dropEvent()` 메소드를 EventManager 호출로 변경
+
+#### Phase 3: 시그널/슬롯 연결 관리 ✅
+4. **`setup_connections()`** - UI 연결 설정
+   - 메뉴 연결 (menu_Edit)
+   - 버튼 연결 (forwardDayBtn, backwardDayBtn, scheduleViewBtn 등)
+   - 정렬 버튼 연결 (sortBtn_name, sortBtn_status 등)  
+   - 콤보박스 연결 (comboDay, comboMonth, comboYear)
+   - 선택 모델 연결 (projSelection_model)
+
+### 주요 문제 해결
+
+#### AttributeError 문제 해결
+**문제**: `setup_connections()` 호출 시 UI 요소들이 아직 정의되지 않은 상태
+**해결**: UI 요소 정의 순서 분석 후 `setup_connections()` 호출 위치를 라인 460으로 이동
+- 모든 버튼, 콤보박스, 모델이 정의된 후 호출하도록 조정
+
+### 코드 감소 효과
+- **이벤트 처리 로직**: 약 100라인 분리
+- **시그널/슬롯 연결**: 약 15라인 분리  
+- **총 감소**: 약 115라인 → EventManager로 이동
+
+### 검증 완료
+- ✅ 구문 검사 통과
+- ✅ 팀 트리뷰 체크박스 클릭 테스트
+- ✅ Delete 키 태스크 삭제 테스트  
+- ✅ 드래그앤드롭 태스크 이동 테스트
+- ✅ 모든 버튼/메뉴 동작 테스트
+- ✅ 콤보박스 변경 테스트
+
+### 리팩토링 원칙 준수
+1. ✅ **단계적 접근**: 한 번에 하나의 메소드씩 분리
+2. ✅ **테스트 우선**: 매 단계마다 외부 테스트 진행
+3. ✅ **의존성 최소화**: 독립성 높은 기능부터 분리
+4. ✅ **실용적 가치**: 실질적 이익이 있는 분리만 진행
+
+### 최종 EventManager 구조
+```python
+class EventManager:
+    def __init__(self, main_window)
+    def handle_event_filter(self, source, event)     # 이벤트 필터링
+    def handle_key_press_event(self, event)          # 키보드 이벤트  
+    def handle_drop_event(self, dropped_items, listView_name)  # 드래그앤드롭
+    def setup_connections(self)                      # 시그널/슬롯 연결
+```
+
+### 다음 단계 추천
+EventManager 구현이 성공적으로 완료되었으므로 다음 후보:
+1. **DatabaseManager**: MongoDB 연결 및 데이터베이스 작업
+2. **UILayoutManager**: 복잡한 UI 레이아웃 관리  
+3. **ValidationManager**: 데이터 검증 로직 통합

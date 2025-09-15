@@ -119,6 +119,131 @@ DOUBLE_CLICK_DELAY = 110 # 멤버 트리뷰 더블클릭 간격
 
 
 
+# EventManager 클래스
+class EventManager:
+    """이벤트 처리, 시그널/슬롯 연결, 타이머 관리를 담당하는 클래스"""
+    
+    def __init__(self, main_window):
+        """EventManager 초기화
+        
+        Args:
+            main_window: DxManager 인스턴스 참조
+        """
+        self.main_window = main_window
+        print("EventManager 초기화 완료")
+        
+    def handle_event_filter(self, source, event):
+        """이벤트 필터링 처리"""
+        if event.type() == QEvent.FocusIn and isinstance(source, QListView):
+            self.main_window.current_focused_list_view = source
+
+        if source is self.main_window.teamTree and event.type() == QEvent.MouseButtonPress:
+            index = self.main_window.teamTree.indexAt(event.pos())
+
+            if index.isValid():
+                item = self.main_window.teamTreeModel.itemFromIndex(index)
+
+                if item and item.isCheckable():
+                    rect = self.main_window.teamTree.visualRect(index)
+                    opts = QStyleOptionViewItem(self.main_window.teamTree.viewOptions())
+                    opts.rect = rect
+                    opts.state |= QStyle.StateFlag.State_Enabled | QStyle.StateFlag.State_On 
+                    check_rect = self.main_window.teamTree.style().subElementRect(
+                        self.main_window.teamTree.style().SE_ItemViewItemCheckIndicator,
+                        opts,
+                        self.main_window.teamTree
+                    )
+
+                    if check_rect.isEmpty():
+                        check_rect = QRect(0,0,16,16)
+
+                    check_rect = check_rect.translated(rect.topLeft())
+
+                    if check_rect.contains(event.pos()):
+                        self.main_window.checkArea_click = 1
+                        return True
+
+        return QObject.eventFilter(self.main_window, source, event)
+        
+    def handle_key_press_event(self, event):
+        """키보드 이벤트 처리"""
+        if event.key() == Qt.Key_Delete:
+            # 현재 스케쥴 리스트뷰의 갯수
+            num_listview = self.main_window.dayUi.splitter.count()
+
+            # 현재 스케쥴 리스트뷰의 태스크들 처리
+            for i in range(num_listview):
+                widget = self.main_window.dayUi.splitter.widget(i)
+                listview_layout = widget.layout()
+
+                if listview_layout:
+                    frame = listview_layout.itemAt(2).widget()
+                    frameLayout = frame.layout()
+                    listview = frameLayout.itemAt(0).widget()
+                    
+                    self.main_window.delete_selected_items(listview)
+
+            self.main_window.updateJson(0)
+            self.main_window.reloadShotList()
+            
+    def handle_drop_event(self, dropped_items, listView_name):
+        """드래그앤드롭 이벤트 처리"""
+        num_listview = self.main_window.dayUi.splitter.count()
+
+        listView_list = []
+        for i in range(num_listview):
+            widget = self.main_window.dayUi.splitter.widget(i)
+            listview_layout = widget.layout()
+
+            if listview_layout:
+                frame = listview_layout.itemAt(2).widget()
+                frameLayout = frame.layout()
+                listview_widget = frameLayout.itemAt(0).widget()
+                listView_list.append(listview_widget)
+
+        date_labels = self.main_window.getLabelData()
+
+        drop_date = ''
+        for i in range(len(listView_list)):
+            if listView_name == (listView_list[i].objectName()):
+                drop_date = date_labels[i]
+
+        dropData = self.main_window.dropData if hasattr(self.main_window, 'dropData') else {}
+        dropData['drop_date'] = drop_date
+        dropData['drop_items'] = dropped_items
+        self.main_window.dropData = dropData
+
+        self.main_window.updateJson(0)  
+
+        # 스케쥴 리스트뷰로 드래그 드랍이 발생한 경우 샷리스트뷰의 태스크 색을 회색으로 변경
+        self.main_window.changeColor_assignedTask()
+        
+    def setup_connections(self):
+        """시그널/슬롯 연결 설정"""
+        # 메뉴 연결
+        self.main_window.menu_Edit.triggered.connect(self.main_window.showMemberEditDialog)
+        
+        # 버튼 연결
+        self.main_window.forwardDayBtn.clicked.connect(self.main_window.forwardDay)
+        self.main_window.backwardDayBtn.clicked.connect(self.main_window.backwardDay)
+        self.main_window.scheduleViewBtn.clicked.connect(self.main_window.showScheduleFrame)
+        self.main_window.dashboardViewBtn.clicked.connect(self.main_window.showDashboardFrame)
+        self.main_window.dataInfoBtn.clicked.connect(self.main_window.showWorkdataWin)
+        
+        # 정렬 버튼 연결
+        self.main_window.ui.sortBtn_name.clicked.connect(self.main_window.sort_by_taskName)
+        self.main_window.ui.sortBtn_status.clicked.connect(self.main_window.sort_by_status)
+        self.main_window.ui.sortBtn_part.clicked.connect(self.main_window.sort_by_part)
+        self.main_window.ui.sortBtn_proj.clicked.connect(self.main_window.sort_by_proj)
+        
+        # 콤보박스 연결
+        self.main_window.comboDay.currentIndexChanged.connect(self.main_window.changeComboDate)
+        self.main_window.comboMonth.currentIndexChanged.connect(self.main_window.changeComboDate)
+        self.main_window.comboYear.currentIndexChanged.connect(self.main_window.changeComboDate)
+        
+        # 선택 모델 연결
+        self.main_window.projSelection_model.selectionChanged.connect(self.main_window.process_sel_project)
+
 # 메인 클래스
 class DxManager(QMainWindow):
     def __init__(self,parent=None):
@@ -229,6 +354,9 @@ class DxManager(QMainWindow):
         # UI 컨트롤러 초기화
         self.ui_controller = UIController(self)
         
+        # EventManager 초기화
+        self.event_manager = EventManager(self)
+        
 
         # KEEP: 내용정리 될때까지 하이드시키기 #################
         self.dashboardViewBtn = self.ui.dashboard_btn
@@ -328,6 +456,9 @@ class DxManager(QMainWindow):
         self.comboBoxDate.append(self.comboMonth.currentText())
         self.comboBoxDate.append(self.comboDay.currentText())
 
+        # EventManager 연결 설정 (모든 UI 요소가 정의된 후)
+        self.event_manager.setup_connections()
+
         # 리스트뷰 UI 설정
         self.listViewNumLineEdit.setText(str(self.listViewSlider.value()))
 
@@ -342,23 +473,7 @@ class DxManager(QMainWindow):
 
 
         # 컨트롤러 속성 연결
-        self.menu_Edit.triggered.connect(self.showMemberEditDialog)
-
-        self.forwardDayBtn.clicked.connect(self.forwardDay)
-        self.backwardDayBtn.clicked.connect(self.backwardDay)
-        self.scheduleViewBtn.clicked.connect(self.showScheduleFrame)
-        self.dashboardViewBtn.clicked.connect(self.showDashboardFrame)
-        self.dataInfoBtn.clicked.connect(self.showWorkdataWin)
-        self.ui.sortBtn_name.clicked.connect(self.sort_by_taskName)
-        self.ui.sortBtn_status.clicked.connect(self.sort_by_status)
-        self.ui.sortBtn_part.clicked.connect(self.sort_by_part)
-        self.ui.sortBtn_proj.clicked.connect(self.sort_by_proj)
-
-        self.comboDay.currentIndexChanged.connect(self.changeComboDate)
-        self.comboMonth.currentIndexChanged.connect(self.changeComboDate)
-        self.comboYear.currentIndexChanged.connect(self.changeComboDate)
-
-        self.projSelection_model.selectionChanged.connect(self.process_sel_project) 
+ 
         self.saveButton.clicked.connect(self.saveFile)        
         self.teamTreeModel.dataChanged.connect(self.handle_item_state_change)
 
@@ -3989,40 +4104,7 @@ class DxManager(QMainWindow):
 
 
     def eventFilter(self, source, event):
-
-        if event.type() == QEvent.FocusIn and isinstance(source, QListView):
-            self.current_focused_list_view = source
-
-        if source is self.teamTree and event.type() == QEvent.MouseButtonPress:
-            index = self.teamTree.indexAt(event.pos())
-
-            if index.isValid():
-                item = self.teamTreeModel.itemFromIndex(index)
-
-                if item and item.isCheckable():
-                    #체크박스 클릭 감지
-                    rect = self.teamTree.visualRect(index)
-                    opts = QStyleOptionViewItem(self.teamTree.viewOptions())
-                    opts.rect = rect
-                    opts.state |= QStyle.StateFlag.State_Enabled | QStyle.StateFlag.State_On 
-                    check_rect = self.teamTree.style().subElementRect(
-                        self.teamTree.style().SE_ItemViewItemCheckIndicator,
-                        opts,
-                        self.teamTree
-                    )
-
-                    # 현재 QStyle.stateFlag.State_HasCheckIndicator 플래그가 존재하지 않아 check_rect 가 (0,0,0,0)으로 나옴
-                    # 그랙서 아래와 같이 강제로 체크박스 기본 크기를 check_rect에 할당
-                    if check_rect.isEmpty():
-                        check_rect = QRect(0,0,16,16) # 체크박스의 기본 크기(가로세로 16픽셀)
-
-                    check_rect = check_rect.translated(rect.topLeft())
-
-                    if check_rect.contains(event.pos()):
-                        self.checkArea_click = 1
-                        return True
-
-        return QObject.eventFilter(self, source, event)
+        return self.event_manager.handle_event_filter(source, event)
 
 
 
@@ -4281,36 +4363,7 @@ class DxManager(QMainWindow):
 
     # 드래그 드랍 아이템 시그널 받아오기
     def get_dropEvent(self, dropped_items, listView_name):
-
-        num_listview = self.dayUi.splitter.count()
-
-        label_index = 0
-        listView_list=[]
-        for i in range(num_listview):
-
-            widget = self.dayUi.splitter.widget(i)
-            listview_layout = widget.layout()
-
-            if listview_layout:
-                frame = listview_layout.itemAt(2).widget()
-                frameLayout = frame.layout()
-                listview_widget = frameLayout.itemAt(0).widget()
-                listView_list.append(listview_widget)
-
-        date_labels = self.getLabelData()
-
-        drop_date = ''
-        for i in range(len(listView_list)):
-            if listView_name == (listView_list[i].objectName()):
-                drop_date = date_labels[i]
-
-        dropData['drop_date']=drop_date
-        dropData['drop_items']=dropped_items
-
-        self.updateJson(0)  
-
-        # 스케쥴 리스트뷰로 드래그 드랍이 발생한 경우 샷리스트뷰의 태스크 색을 회색으로 변경
-        self.changeColor_assignedTask()
+        self.event_manager.handle_drop_event(dropped_items, listView_name)
 
 
 
@@ -4318,26 +4371,7 @@ class DxManager(QMainWindow):
 
     # del키를 눌렀을때 해당 리스트뷰의 아이템들을 리스트뷰에서 삭제
     def keyPressEvent(self, event):
-
-        if event.key() == Qt.Key_Delete:# and self.current_focused_list_view:
-            # 현재 스케쥴 리스트뷰의 갯수
-            num_listview = self.dayUi.splitter.count()
-
-            # 현재 스케쥴 리스트뷰의 태스크들을 listView_task 리스트에 저장
-            listView_task = []
-            for i in range(num_listview):
-                widget = self.dayUi.splitter.widget(i)
-                listview_layout = widget.layout()
-
-                if listview_layout:
-                    frame = listview_layout.itemAt(2).widget()
-                    frameLayout = frame.layout()
-                    listview = frameLayout.itemAt(0).widget()
-                    
-                    self.delete_selected_items(listview)
-
-            self.updateJson(0)
-            self.reloadShotList()
+        self.event_manager.handle_key_press_event(event)
 
 
 
