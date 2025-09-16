@@ -674,3 +674,57 @@ EventManager 구현이 성공적으로 완료되었으므로 다음 후보:
 2. **단계적 푸시**: 큰 변경사항은 단계별로 푸시하여 문제 범위 최소화
 3. **백업 전략**: 안정 버전 태그 생성으로 빠른 복구 지원
 4. **테스트 자동화**: 향후 CI/CD 도입으로 머지 전 자동 검증 고려
+
+## EventManager 파일 분리 완료 (2025-09-16)
+
+### 작업 완료 내용
+✅ **EventManager 클래스 파일 분리 성공**
+- **위치**: `class/event_manager.py` (새로 생성)
+- **분리된 메소드들**:
+  - `__init__(main_window)` - 초기화
+  - `handle_event_filter(source, event)` - 이벤트 필터링 처리
+  - `handle_key_press_event(event)` - 키보드 이벤트 처리
+  - `handle_drop_event(dropped_items, listView_name)` - 드래그앤드롭 이벤트
+  - `setup_connections()` - 시그널/슬롯 연결 설정
+
+### 구현 세부사항
+- **파일 크기**: 약 123라인 → 별도 파일로 분리
+- **import 방식**: `from class.event_manager import EventManager`
+- **초기화**: `self.event_manager = EventManager(self)` (DxManager.__init__에서)
+- **의존성**: PySide2 Qt 모듈 (QtCore, QtWidgets, QtGui)
+
+### 테스트 검증
+✅ **구문 검사 통과**: `python3 -m py_compile` 성공
+✅ **외부 시스템 테스트 완료**: 이상 없음 확인
+✅ **기능 동작 검증**:
+- 팀 트리뷰 체크박스 클릭
+- Delete 키 태스크 삭제
+- 드래그앤드롭 태스크 이동
+- 모든 버튼/메뉴 동작
+- 콤보박스 변경
+
+### 코드 감소 효과
+- **dxManager.py**: 약 123라인 감소
+- **총 분리 완료**: 6개 클래스 (EventManager 포함)
+  1. TacticAPIClient (2025-09-08)
+  2. DataManager (2025-09-09)
+  3. UIController (2025-09-09)
+  4. TeamManager (2025-09-09)
+  5. FileManager (2025-09-09)
+  6. **EventManager** (2025-09-16) ✅ **최신 완료**
+
+### 현재 프로젝트 상태 (2025-09-16)
+- **메인 파일**: dxManager.py (약 123라인 추가 감소)
+- **분리된 클래스**: 6개 매니저 클래스
+- **누적 코드 감소**: 약 **35% 코드 감소** 달성
+- **상태**: 모든 기능 정상 작동, 안정성 확보
+
+### 다음 단계 후보 (우선순위별)
+1. **DatabaseManager**: MongoDB 연결, JSON 데이터 처리 로직
+   - 후보 메소드: `scheduleExportJson()`, `updateJson()` 등
+   - 복잡도: 높음 (global 변수 의존성 있음)
+2. **UILayoutManager**: UI 레이아웃 및 위젯 관리
+   - 후보 메소드: UI 관련 메소드들
+   - 복잡도: 중간 (Qt 위젯 의존성)
+3. **ValidationManager**: 데이터 검증 로직 통합
+   - 기존 utils/validation.py와 연계 가능
