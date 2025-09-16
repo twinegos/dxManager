@@ -70,7 +70,8 @@ uiPath = currentPath + "/UI"
 sys.path.append(classPath)
 sys.path.append(uiPath)
 # 클래스 모듈 imports
-import dragDropListView as ddlv 
+import dragDropListView as ddlv
+from sort_manager import SortManager 
 import editMemberDialog as memberDialog
 import taskInfoDialog
 import status_projManday
@@ -116,6 +117,7 @@ connect_shot_schedule = {} # 프로세스내 사용되는 샷리스트와 스케
 sortOrder_date = {} # 스케쥴 리스트뷰의 소팅오더를 저장
 sortColumn_date = {} # 스케쥴 리스트뷰의 소팅한 최종 컬럼이 어떤것인지 저장
 DOUBLE_CLICK_DELAY = 110 # 멤버 트리뷰 더블클릭 간격
+
 
 
 
@@ -233,6 +235,9 @@ class DxManager(QMainWindow):
         
         # EventManager 초기화
         self.event_manager = EventManager(self)
+
+        # SortManager 초기화
+        self.sort_manager = SortManager(self)
         
 
         # KEEP: 내용정리 될때까지 하이드시키기 #################
@@ -634,144 +639,70 @@ class DxManager(QMainWindow):
 
     # updateJson이나 refreshListViews와 같이 reloadShotListView 메서드를 통해 shotListView를 리프레시하는 경우 이전에 적용된 정렬을 그대로 다시 적용
     def sortShotlistview(self):
-
-        model = self.shotListview.model()    
-
-        if isinstance(model, QSortFilterProxyModel):
-            source_model = model.sourceModel()
-
-        else:
-            source_model = model
-
-        #정렬상태유지
-        if source_model != None:
-            source_model.setSortOrder(self.sort_order)
-            source_model.sort(self.sort_column, self.sort_order)
-            self.setItemColor_taskList()
+        """SortManager로 위임"""
+        self.sort_manager.sortShotlistview()
 
 
     # shotListView의 태스크명 정렬
     def sort_by_taskName(self):
-
-        self.sort_column = 1
-        self.sort_order = Qt.DescendingOrder if self.sort_order == Qt.AscendingOrder else Qt.AscendingOrder
-        self.sortShotlistview()
-        self.set_listView_view(self.shotListview, self.shotListview.model())
+        """SortManager로 위임"""
+        self.sort_manager.sort_by_taskName()
 
 
     # shotListView의 상태명 정렬
     def sort_by_status(self):
-
-        self.sort_column = 3
-        self.sort_order = Qt.DescendingOrder if self.sort_order == Qt.AscendingOrder else Qt.AscendingOrder
-        self.sortShotlistview()
-        self.set_listView_view(self.shotListview, self.shotListview.model())
+        """SortManager로 위임"""
+        self.sort_manager.sort_by_status()
 
 
     # shotListView의 파트명 정렬
     def sort_by_part(self):
-
-        self.sort_column = 4
-        self.sort_order = Qt.DescendingOrder if self.sort_order == Qt.AscendingOrder else Qt.AscendingOrder
-        self.sortShotlistview()
-        self.set_listView_view(self.shotListview, self.shotListview.model())
+        """SortManager로 위임"""
+        self.sort_manager.sort_by_part()
 
 
-    # shotListView의 파트명 정렬
+    # shotListView의 프로젝트명 정렬
     def sort_by_proj(self):
-
-        self.sort_column = 0
-        self.sort_order = Qt.DescendingOrder if self.sort_order == Qt.AscendingOrder else Qt.AscendingOrder
-        self.sortShotlistview()
-        self.set_listView_view(self.shotListview, self.shotListview.model())
+        """SortManager로 위임"""
+        self.sort_manager.sort_by_proj()
 
 
 
 
     # 스케쥴 리스트뷰의 태스크명 정렬
     def sort_sch_listView_task(self, sche_class, sche_listview, label_day):
-
-        model = sche_listview.model()
-        selectDate = label_day.text()
-        year = int(self.comboYear.currentText())
-        month = int(selectDate.split(" ")[0].split("/")[0])
-        day = int(selectDate.split(" ")[0].split("/")[1])
-
-        dateDic = {"year":year, "month":month, "day":day}
-
-        sche_class.sort_order = Qt.DescendingOrder if sche_class.sort_order == Qt.AscendingOrder else Qt.AscendingOrder
-        self.sortScheduleListview(sche_listview, model, sche_class.sort_order, 1, dateDic)#sche_listview.sort_column, )
+        """SortManager로 위임"""
+        self.sort_manager.sort_sch_listView_task(sche_class, sche_listview, label_day)
 
 
 
 
     # 스케쥴 리스트뷰의 상태명 정렬
     def sort_sch_listView_status(self, sche_class, sche_listview, label_day):
-
-        model = sche_listview.model()
-        selectDate = label_day.text()
-        year = int(self.comboYear.currentText())
-        month = int(selectDate.split(" ")[0].split("/")[0])
-        day = int(selectDate.split(" ")[0].split("/")[1])
-
-        dateDic = {"year":year, "month":month, "day":day}
-
-        sche_class.sort_order = Qt.DescendingOrder if sche_class.sort_order == Qt.AscendingOrder else Qt.AscendingOrder
-        self.sortScheduleListview(sche_listview, model, sche_class.sort_order, 3, dateDic)#sche_listview.sort_column, )
+        """SortManager로 위임"""
+        self.sort_manager.sort_sch_listView_status(sche_class, sche_listview, label_day)
 
 
 
     # 스케쥴 리스트뷰의 part명의 정렬
     def sort_sch_listView_part(self, sche_class, sche_listview, label_day):
-
-        model = sche_listview.model()
-        selectDate = label_day.text()
-        year = int(self.comboYear.currentText())
-        month = int(selectDate.split(" ")[0].split("/")[0])
-        day = int(selectDate.split(" ")[0].split("/")[1])
-
-        dateDic = {"year":year, "month":month, "day":day}
-
-        sche_class.sort_order = Qt.DescendingOrder if sche_class.sort_order == Qt.AscendingOrder else Qt.AscendingOrder
-
-        self.sortScheduleListview(sche_listview, model, sche_class.sort_order, 4, dateDic)
+        """SortManager로 위임"""
+        self.sort_manager.sort_sch_listView_part(sche_class, sche_listview, label_day)
 
         
 
     # 스케쥴 리스트뷰의 project명의 정렬
     def sort_sch_listView_proj(self, sche_class, sche_listview, label_day):
-
-        model = sche_listview.model()
-        selectDate = label_day.text()
-        year = int(self.comboYear.currentText())
-        month = int(selectDate.split(" ")[0].split("/")[0])
-        day = int(selectDate.split(" ")[0].split("/")[1])
-
-        dateDic = {"year":year, "month":month, "day":day}
-
-        sche_class.sort_order = Qt.DescendingOrder if sche_class.sort_order == Qt.AscendingOrder else Qt.AscendingOrder
-
-        self.sortScheduleListview(sche_listview, model, sche_class.sort_order, 0, dateDic)
+        """SortManager로 위임"""
+        self.sort_manager.sort_sch_listView_proj(sche_class, sche_listview, label_day)
 
 
 
 
     # 스케쥴 리스트뷰의 소팅실행
     def sortScheduleListview(self, listview, model, sortOrder, sortColumn, date=None):
-
-        if isinstance(model, QSortFilterProxyModel):
-            source_model = model.sourceModel()
-        else:
-            source_model = model
-
-
-        #정렬상태유지
-        if source_model != None:
-            source_model.setSortOrder(sortOrder)
-            source_model.sort(sortColumn, sortOrder)
-            self.set_itemBackgroundColor(source_model, date)
-
-            self.set_listView_view(listview, source_model)
+        """SortManager로 위임"""
+        self.sort_manager.sortScheduleListview(listview, model, sortOrder, sortColumn, date)
 
 
 

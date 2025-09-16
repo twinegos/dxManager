@@ -719,6 +719,126 @@ EventManager 구현이 성공적으로 완료되었으므로 다음 후보:
 - **누적 코드 감소**: 약 **35% 코드 감소** 달성
 - **상태**: 모든 기능 정상 작동, 안정성 확보
 
+## SortManager 구현 진행 (2025-09-16)
+
+### 개요
+EventManager 파일 분리 완료 후, 정렬 기능을 담당하는 SortManager 클래스 구현을 진행합니다. 기존과 동일한 패턴으로 dxManager.py 내부에서 클래스를 먼저 구현하고, 메소드를 단계적으로 추가하면서 외부 테스트를 병행합니다.
+
+### 구현 계획
+#### Phase 1: 기본 클래스 구조 ✅
+- **위치**: dxManager.py 내부 (라인 124-178)
+- **기능**: SortManager 클래스 기본 구조 및 초기화
+- **초기화**: DxManager에서 SortManager 인스턴스 생성
+
+#### Phase 2: 정렬 메소드 분리 ✅
+1. **`sort_by_taskName()`** - shotListView의 태스크명 정렬
+2. **`sort_by_status()`** - shotListView의 상태명 정렬
+3. **`sort_by_part()`** - shotListView의 파트명 정렬
+4. **`sort_by_proj()`** - shotListView의 프로젝트명 정렬
+5. **`sortShotlistview()`** - 샷 리스트뷰 정렬 실행
+
+### 구현 완료 내용
+✅ **SortManager 클래스 구현 완료**
+- **위치**: dxManager.py:124-178 (총 55라인)
+- **구현된 메소드들**:
+  - `__init__(main_window)` - 초기화
+  - `sort_by_taskName()` - 태스크명 기준 정렬
+  - `sort_by_status()` - 상태명 기준 정렬
+  - `sort_by_part()` - 파트명 기준 정렬
+  - `sort_by_proj()` - 프로젝트명 기준 정렬
+  - `sortShotlistview()` - 정렬 실행 로직
+
+### 기존 메소드 수정
+✅ **기존 정렬 메소드들을 SortManager 위임으로 변경**
+- `sort_by_taskName()`: SortManager로 위임
+- `sort_by_status()`: SortManager로 위임
+- `sort_by_part()`: SortManager로 위임
+- `sort_by_proj()`: SortManager로 위임
+
+### 테스트 검증
+✅ **구문 검사 통과**: `python3 -m py_compile dxManager.py` 성공
+✅ **외부 시스템 테스트 완료**: "테스트 완료 이상없음" 확인
+✅ **기능 동작 검증**:
+- 태스크명 정렬 버튼 동작
+- 상태명 정렬 버튼 동작
+- 파트명 정렬 버튼 동작
+- 프로젝트명 정렬 버튼 동작
+- 정렬 순서 토글 (오름차순/내림차순)
+
+### 코드 감소 효과
+- **정렬 로직 분리**: 약 55라인을 SortManager 클래스로 분리
+- **코드 구조화**: 정렬 관련 모든 로직을 하나의 클래스로 통합
+- **유지보수성 향상**: 정렬 기능 수정 시 SortManager만 집중하면 됨
+
+### 다음 단계
+1. **SortManager 파일 분리**: class/sort_manager.py로 분리 예정
+2. **다음 클래스 분리**: DatabaseManager, UILayoutManager 등
+
+## SortManager 파일 분리 완료 (2025-09-16)
+
+### 작업 완료 내용
+✅ **SortManager 클래스 파일 분리 성공**
+- **위치**: `class/sort_manager.py` (새로 생성)
+- **구현된 메소드들 (총 10개)**:
+
+#### shotListView 정렬 메소드 (5개)
+1. `sort_by_taskName()` - 태스크명 기준 정렬
+2. `sort_by_status()` - 상태명 기준 정렬
+3. `sort_by_part()` - 파트명 기준 정렬
+4. `sort_by_proj()` - 프로젝트명 기준 정렬
+5. `sortShotlistview()` - 샷 리스트뷰 정렬 실행
+
+#### scheduleListView 정렬 메소드 (5개)
+6. `sort_sch_listView_task()` - 스케줄 태스크명 정렬
+7. `sort_sch_listView_status()` - 스케줄 상태명 정렬
+8. `sort_sch_listView_part()` - 스케줄 파트명 정렬
+9. `sort_sch_listView_proj()` - 스케줄 프로젝트명 정렬
+10. `sortScheduleListview()` - 스케줄 리스트뷰 정렬 실행
+
+### 구현 과정
+#### Phase 1: dxManager.py 내부 구현 ✅
+- SortManager 클래스 기본 구조 생성 (라인 124-245)
+- DxManager에서 SortManager 인스턴스 생성
+- 기존 정렬 메소드들을 SortManager로 위임
+
+#### Phase 2: 메소드 단계적 추가 ✅
+- shotListView 정렬 메소드 5개 구현
+- scheduleListView 정렬 메소드 5개 추가
+- 각 단계마다 외부 테스트 진행하여 안정성 확보
+
+#### Phase 3: 파일 분리 ✅
+- `class/sort_manager.py` 파일 생성
+- dxManager.py에서 SortManager 클래스 제거 (121라인 감소)
+- `from sort_manager import SortManager` import 추가
+
+### 테스트 검증
+✅ **구문 검사 통과**: `python3 -m py_compile` 성공
+✅ **외부 시스템 테스트 완료**: "테스트 완료 이상없음" 확인
+✅ **기능 동작 검증**:
+- shotListView 정렬 4개 버튼 모두 정상 동작
+- scheduleListView 정렬 4개 기능 모두 정상 동작
+- 정렬 순서 토글 (오름차순/내림차순) 정상 동작
+- 다른 기능들에 영향 없음 확인
+
+### 코드 감소 효과
+- **dxManager.py**: 약 121라인 감소
+- **새로운 파일**: class/sort_manager.py (약 100라인)
+- **실질적 감소**: 약 21라인 (중복 제거 효과)
+- **모듈화**: 정렬 관련 모든 로직이 독립적 관리 가능
+
+### 현재 프로젝트 상태 (2025-09-16 최종)
+- **총 분리 완료**: 7개 클래스
+  1. TacticAPIClient (2025-09-08)
+  2. DataManager (2025-09-09)
+  3. UIController (2025-09-09)
+  4. TeamManager (2025-09-09)
+  5. FileManager (2025-09-09)
+  6. EventManager (2025-09-16)
+  7. **SortManager** (2025-09-16) ✅ **최신 완료**
+
+- **누적 코드 감소**: 약 **40% 코드 감소** 달성
+- **상태**: 모든 기능 정상 작동, 안정성 확보
+
 ### 다음 단계 후보 (우선순위별)
 1. **DatabaseManager**: MongoDB 연결, JSON 데이터 처리 로직
    - 후보 메소드: `scheduleExportJson()`, `updateJson()` 등
@@ -728,3 +848,9 @@ EventManager 구현이 성공적으로 완료되었으므로 다음 후보:
    - 복잡도: 중간 (Qt 위젯 의존성)
 3. **ValidationManager**: 데이터 검증 로직 통합
    - 기존 utils/validation.py와 연계 가능
+
+### 리팩토링 원칙 (검증 완료)
+1. ✅ **단계적 접근**: dxManager.py 내부 → 메소드 추가 → 파일 분리
+2. ✅ **테스트 우선**: 매 단계마다 외부 테스트로 안정성 확보
+3. ✅ **의존성 최소화**: 독립성 높은 기능부터 분리
+4. ✅ **실용적 가치**: 실질적 이익이 있는 분리만 진행
