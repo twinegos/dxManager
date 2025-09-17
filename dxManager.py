@@ -93,6 +93,7 @@ from team_manager import TeamManager
 from file_manager import FileManager
 from event_manager import EventManager
 from ui_layout_manager import UILayoutManager
+from validation_manager import ValidationManager
 
 userID = config.get_user_id()
 
@@ -125,6 +126,8 @@ DOUBLE_CLICK_DELAY = 110 # 멤버 트리뷰 더블클릭 간격
 
 
 # UILayoutManager 클래스
+
+
 
 # 메인 클래스
 class DxManager(QMainWindow):
@@ -244,7 +247,10 @@ class DxManager(QMainWindow):
 
         # SortManager 초기화
         self.sort_manager = SortManager(self)
-        
+
+        # ValidationManager 초기화
+        self.validation_manager = ValidationManager(self)
+
 
         # KEEP: 내용정리 될때까지 하이드시키기 #################
         self.dashboardViewBtn = self.ui.dashboard_btn
@@ -784,13 +790,7 @@ class DxManager(QMainWindow):
 
 
 
-    def check_projTask(self, seqTemplete, task, proj):
-
-        for seq in seqTemplete:
-            if seq in task:
-                return True
-
-        return False                
+                
 
 
 
@@ -4448,7 +4448,7 @@ class DxManager(QMainWindow):
                                         and item["day"] == listView_date[i]["day"]]
 
                 # 생성된 task_data의 어싸인 업데이트가 있었는지 확인하고 있었다면, jsonData내의 스케쥴 데이타를 삭제하고, 현재 진행중이던 태스크의 스케쥴생성은 중단함.
-                if self.check__Task_data(task_data, filterDate_inJson):
+                if self.check__Task_data(task_data, filterDate_inJson, jsonData):
                     continue
 
                 if jsonData == []:
@@ -4499,67 +4499,25 @@ class DxManager(QMainWindow):
 
 
     def check_date_exists(self, json_dicts, task_dict):
-        """딕셔너리 리스트에서 날짜 존재 여부 확인"""
-        for dict_item in json_dicts:
-            if (dict_item['year'] == task_dict['year'] and
-                dict_item['month'] == task_dict['month'] and
-                dict_item['day'] == task_dict['day']):
-                return True
-        return False
+        """ValidationManager로 위임"""
+        return self.validation_manager.check_date_exists(json_dicts, task_dict)
 
     def check_dateMember_exists(self, json_dicts, task_dict):
-        """딕셔너리 리스트에서 날짜와 멤버 조합 존재 여부 확인"""
-        for dict_item in json_dicts:
-            if (dict_item['year'] == task_dict['year'] and
-                dict_item['month'] == task_dict['month'] and
-                dict_item['day'] == task_dict['day'] and
-                dict_item["artist"] == task_dict["artist"]):
-                return True
-        return False
+        """ValidationManager로 위임"""
+        return self.validation_manager.check_dateMember_exists(json_dicts, task_dict)
 
-    def check_artist_exists(self, json_dicts, task_dict):
-        """딕셔너리 리스트에서 아티스트 존재 여부 확인"""
-        for dict_item in json_dicts:
-            if (dict_item['artist'] == task_dict['artist']):
-                return True
-        return False
 
-    def check_value_in_Dict(self, dictList, element):
-        """딕셔너리의 tasks 내 리스트 값들에서 요소 존재 여부 확인"""
-        for dict_item in dictList:
-            if dict_item['tasks'] != [{}]:
-                for value in dict_item['tasks'][0].values():
-                    if isinstance(value, list) and element in value:
-                        return True
-        return False
+                        
+
+
 
     def check_value_in_lists(self, dic, value):
-        """딕셔너리 내 리스트들에서 값 존재 여부 확인"""
-        for hi in dic:
-            if value in dic[hi]:
-                return True, hi
-        return False, None                        
+        """ValidationManager로 위임"""
+        return self.validation_manager.check_value_in_lists(dic, value)
 
-
-
-    def check__Task_data(self, taskData, filterDate_tasks):
-
-        if taskData["tasks"][0]:
-            for proj in taskData["tasks"][0]:
-                for task in taskData["tasks"][0][proj]:
-
-                    for filterData in  filterDate_tasks:
-
-                        for filterProj in filterData["tasks"][0]:
-                            if task in filterData["tasks"][0][filterProj]:
-                                delAssign = filterData["artist"]
-                                newAssign = taskData["artist"]
-
-                                if (delAssign != newAssign) and filterData["department"] == taskData["department"]:
-                                    self.updateAssignment(delAssign, newAssign, taskData)
-                                    jsonData.remove(filterData)
-
-                                    return True
+    def check__Task_data(self, taskData, filterDate_tasks, jsonData):
+        """ValidationManager로 위임"""
+        return self.validation_manager.check__Task_data(taskData, filterDate_tasks, jsonData)
 
 
 

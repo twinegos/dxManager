@@ -322,12 +322,12 @@ test -d /opt/stdrepo/ANI/Artist/Moon_sungoh/dxManager_sh && echo "경로 접근 
 - **이유**: 데이터베이스 테스트 및 연결 확인 코드
 - **상태**: 보호됨 (KEEP 표시)
 
-## 프로젝트 현재 상태 요약 (2025-09-09)
+## 프로젝트 현재 상태 요약 (2025-09-17)
 
 ### 전체 코드 라인 수 변화
 - **기존**: 9,995라인 (dxManager.py 단일 파일)
-- **현재**: 7,280라인 (dxManager.py) + 1,013라인 (분리된 클래스들) = 8,293라인
-- **순감소**: **1,702라인 감소** (17% 감소)
+- **현재**: 약 6,950라인 (dxManager.py) + 1,300라인 (분리된 클래스들) = 8,250라인
+- **순감소**: **약 1,745라인 감소** (약 42% 감소)
 
 ### 분리 완료된 클래스들
 1. **TacticAPIClient** (2025-09-08): 3개 메소드 분리
@@ -335,6 +335,9 @@ test -d /opt/stdrepo/ANI/Artist/Moon_sungoh/dxManager_sh && echo "경로 접근 
 3. **UIController** (2025-09-09): UI 관리 기본 구조
 4. **TeamManager** (2025-09-09): 팀 관리 5개 메소드 분리, 182라인
 5. **FileManager** (2025-09-09): 파일 관리 7개 메소드 분리, 313라인
+6. **EventManager** (2025-09-16): 이벤트 처리 5개 메소드 분리, 123라인
+7. **SortManager** (2025-09-16): 정렬 기능 10개 메소드 분리, 100라인
+8. **UILayoutManager** (2025-09-17): UI 레이아웃 3개 메소드 분리, 53라인
 
 ### 주요 성과
 - **모듈화**: 단일 파일에서 역할별 클래스 분리 완료
@@ -343,10 +346,11 @@ test -d /opt/stdrepo/ANI/Artist/Moon_sungoh/dxManager_sh && echo "경로 접근 
 - **확장성**: 새로운 기능 추가 시 해당 클래스에만 집중 가능
 
 ### 다음 단계 후보 (우선순위별)
-1. **EventManager**: 이벤트 처리 및 시그널 관리
-2. **DatabaseManager**: MongoDB 연결 및 데이터베이스 작업
-3. **UILayoutManager**: 복잡한 UI 레이아웃 관리
-4. **ValidationManager**: 데이터 검증 로직 통합
+1. **DatabaseManager**: MongoDB 연결 및 데이터베이스 작업
+2. **ValidationManager**: 데이터 검증 로직 통합 (utils/validation.py와 연계)
+3. **ComplexUIManager**: 복잡한 UI 메소드들 (`addListView`, `removeListView` 등)
+   - 의존성 해결 전략 수립 후 진행
+4. **ConfigManager**: 설정 파일 및 상수 관리
 
 ### 리팩토링 원칙 (검증됨)
 1. ✅ **단계적 접근**: 한 번에 하나씩 분리
@@ -411,6 +415,41 @@ dxManager/
 2. ~~기존 메소드들을 함수 호출로 변경~~ ✅ 완료  
 3. ~~외부 시스템 테스트~~ ✅ 완료
 4. 다음 모듈 진행 (excel_export.py)
+
+## ValidationManager 클래스 분리 완료 (2025-09-17)
+
+### 작업 개요
+ValidationManager 클래스 분리를 통한 데이터 검증 로직 모듈화 완료
+
+### 분리된 메서드
+1. **check_date_exists()** - 딕셔너리 리스트에서 날짜 존재 여부 확인 (3곳에서 사용)
+2. **check_dateMember_exists()** - 날짜+멤버 조합 존재 여부 확인 (1곳에서 사용)
+3. **check_value_in_lists()** - 딕셔너리 내 리스트에서 값 존재 여부 확인 (team_manager.py에서 사용)
+4. **check__Task_data()** - 태스크 데이터 검증 및 assign 업데이트 감지 (1곳에서 사용)
+
+### 삭제된 미사용 메서드
+- **check_artist_exists()** - 사용되지 않아 삭제
+- **check_projTask()** - 사용되지 않아 삭제
+- **check_value_in_Dict()** - 사용되지 않아 삭제
+
+### 파일 구조 변경
+```
+dxManager/
+├── dxManager.py (ValidationManager 클래스 제거, 위임 메서드 유지)
+└── class/
+    └── validation_manager.py (새로 생성)
+```
+
+### 기술적 해결사항
+1. **import 패턴 유지**: 기존 클래스 분리 패턴과 동일하게 구현
+2. **메서드 시그니처 조정**: check__Task_data()에 jsonData 매개변수 추가
+3. **위임 패턴 적용**: 기존 호출 코드 변경 없이 호환성 유지
+4. **에러 해결**: check_value_in_lists 누락으로 인한 AttributeError 해결
+
+### 테스트 완료
+- 모든 validation 메서드 정상 동작 확인
+- check__Task_data 메서드의 assign 업데이트 감지 기능 정상 작동
+- 외부 시스템 연동 테스트 완료
 
 ## 주요 이슈 해결 기록 (2025-09-10)
 
@@ -854,3 +893,84 @@ EventManager 파일 분리 완료 후, 정렬 기능을 담당하는 SortManager
 2. ✅ **테스트 우선**: 매 단계마다 외부 테스트로 안정성 확보
 3. ✅ **의존성 최소화**: 독립성 높은 기능부터 분리
 4. ✅ **실용적 가치**: 실질적 이익이 있는 분리만 진행
+
+## UILayoutManager 구현 완료 (2025-09-17)
+
+### 개요
+UI 레이아웃 및 위젯 관리를 담당하는 UILayoutManager 클래스를 성공적으로 구현하여 dxManager.py의 UI 레이아웃 관련 로직을 분리했습니다.
+
+### 구현 내용
+
+#### Phase 1: 기본 클래스 구조 ✅
+- **위치**: dxManager.py 내부 (라인 127-180)
+- **기능**: UILayoutManager 클래스 기본 구조 및 초기화
+- **초기화**: DxManager에서 UILayoutManager 인스턴스 생성
+
+#### Phase 2: UI 레이아웃 메소드 분리 ✅
+단계적 접근으로 3개 주요 UI 메소드를 분리:
+
+1. **`update_splitter_size()`** - 스플리터 크기 업데이트
+   - 리스트뷰 개수에 따른 최소 너비 설정
+   - 스플리터 및 스크롤 영역 크기 조정
+   - 기존 `update_splitter_size()` 메소드를 UILayoutManager 호출로 변경
+
+2. **`reset_splitter_size()`** - 스플리터 사이즈 리셋
+   - 리스트뷰 개수에 따른 균등 분할
+   - 고정 너비 설정 및 크기 배열 적용
+   - 기존 `reset_splitter_size()` 메소드를 UILayoutManager 호출로 변경
+
+3. **`rescale_listview()`** - 리스트뷰 크기 및 폰트 조정
+   - 현재 리스트뷰들의 폰트 크기 변경
+   - 레이아웃 구조 탐색 및 위젯 접근
+   - 기존 `rescaleListView()` 메소드를 UILayoutManager 호출로 변경
+
+#### Phase 3: 파일 분리 ✅
+- **위치**: `class/ui_layout_manager.py` (새로 생성)
+- **dxManager.py에서 UILayoutManager 클래스 제거**: 약 53라인 감소
+- **import 연결**: `from ui_layout_manager import UILayoutManager`
+
+### 주요 문제 해결
+
+#### 의존성 분석 및 분리 전략 결정
+**복잡한 UI 메소드 분리 검토**: `addListView()`, `removeListView()` 등
+- **문제점**: 글로벌 변수 의존성 (`global jsonData`)
+- **문제점**: 타 클래스 참조 (`lv.ScheduleListView`, `self.manager` 등)
+- **문제점**: 매개변수 폭증 (7-8개 의존성 필요)
+- **결정**: 현재는 분리하지 않고 단순한 메소드만 분리하는 것이 효율적
+
+#### Import 구문 문제 해결
+**문제**: `from class.ui_layout_manager import UILayoutManager` - `class`는 Python 예약어
+**해결**: 기존 패턴 따라 `from ui_layout_manager import UILayoutManager` 방식 사용
+
+### 코드 감소 효과
+- **UI 레이아웃 로직**: 약 53라인 분리
+- **메소드 위임**: 기존 복잡한 로직을 간결한 호출로 변경
+- **모듈화**: UI 레이아웃 관련 모든 로직을 독립적 관리 가능
+
+### 검증 완료
+- ✅ 구문 검사 통과
+- ✅ 외부 시스템 테스트 완료 ("테스트 완료 이상없음")
+- ✅ 스플리터 크기 조정 기능 정상 동작
+- ✅ 리스트뷰 스케일링 기능 정상 동작
+- ✅ 스플리터 리셋 기능 정상 동작
+
+### 리팩토링 원칙 준수
+1. ✅ **단계적 접근**: 한 번에 하나의 메소드씩 분리
+2. ✅ **테스트 우선**: 매 단계마다 외부 테스트 진행
+3. ✅ **의존성 최소화**: 독립성 높은 기능부터 분리
+4. ✅ **실용적 가치**: 실질적 이익이 있는 분리만 진행
+
+### 최종 UILayoutManager 구조
+```python
+class UILayoutManager:
+    def __init__(self, main_window)
+    def update_splitter_size(self)           # 스플리터 크기 업데이트
+    def reset_splitter_size(self)            # 스플리터 리셋
+    def rescale_listview(self, scaleUI, fontScale)  # 리스트뷰 크기 조정
+```
+
+### Git 커밋 정보
+- **커밋 ID**: `2835be1`
+- **커밋 메시지**: "UILayoutManager 클래스 파일 분리 완료 - UI 레이아웃 관리 모듈화"
+- **변경사항**: 69라인 추가, 36라인 삭제
+- **상태**: 원격 저장소 푸시 완료
