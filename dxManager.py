@@ -92,6 +92,7 @@ from ui_controller import UIController
 from team_manager import TeamManager
 from file_manager import FileManager
 from event_manager import EventManager
+from ui_layout_manager import UILayoutManager
 
 userID = config.get_user_id()
 
@@ -123,6 +124,8 @@ DOUBLE_CLICK_DELAY = 110 # 멤버 트리뷰 더블클릭 간격
 
 
 
+# UILayoutManager 클래스
+
 # 메인 클래스
 class DxManager(QMainWindow):
     def __init__(self,parent=None):
@@ -152,6 +155,9 @@ class DxManager(QMainWindow):
         
         # 파일 관리자 초기화
         self.file_manager = FileManager(self)
+
+        # UI 레이아웃 관리자 초기화
+        self.ui_layout_manager = UILayoutManager(self)
 
         self.currName_kr, self.role, self.team, self.job, self.department = self.checkUserInfo(userID) # 현재유저의 정보 가져오기
 
@@ -588,14 +594,8 @@ class DxManager(QMainWindow):
 
 
     def update_splitter_size(self):
-
-        Listview_Num = self.dayUi.splitter.count()
-
-        total_min_width = Listview_Num * self.listview_minimum
-        self.dayUi.splitter.setMinimumWidth(total_min_width)
-
-        self.dayUi.splitter.adjustSize()
-        self.dayUi.scrollArea.adjustSize()
+        """UILayoutManager로 위임"""
+        self.ui_layout_manager.update_splitter_size()
 
 
 
@@ -3039,25 +3039,8 @@ class DxManager(QMainWindow):
 
 
     def rescaleListView(self, scaleUI, fontScale):
-
-        currentNumListView = self.day_listViewLayout.count()
-
-        for i in range(currentNumListView):
-            layout_listview = self.day_listViewLayout.itemAt(i)
-
-            if layout_listview:
-                widgetItem_frame = layout_listview.layout().itemAt(2)
-                
-                if widgetItem_frame:
-                    frame = widgetItem_frame.widget()
-
-                    if frame:
-                        currentListview = frame.layout().itemAt(0).widget()
-                        listView_width = currentListview.width()
-
-                        font = QFont()
-                        font.setPointSize(fontScale)
-                        currentListview.setFont(font)
+        """UILayoutManager로 위임"""
+        self.ui_layout_manager.rescale_listview(scaleUI, fontScale)
 
 
 
@@ -4756,15 +4739,8 @@ class DxManager(QMainWindow):
 
     # 스케쥴 리스트뷰의 스플리터 사이즈 리셋
     def reset_splitter_size(self):
-
-        listViewNum = int(self.listViewNumLineEdit.text())
-        splitter_width = listViewNum*self.listview_minimum
-
-        equal_size = splitter_width // listViewNum
-        sizes = [equal_size]*listViewNum
-
-        self.dayUi.splitter.setSizes(sizes)
-        self.dayUi.splitter.setFixedWidth(splitter_width)
+        """UILayoutManager로 위임"""
+        self.ui_layout_manager.reset_splitter_size()
 
 
 
