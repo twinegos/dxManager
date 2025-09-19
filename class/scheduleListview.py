@@ -160,10 +160,10 @@ class ScheduleListView(QWidget):      #, label, listView, parentLayout, childLay
 
         self.model = self.listView_day.model()
 
-        self.sortBtn_name.clicked.connect(lambda: main.sort_sch_listView_task(self, self.listView_day, self.label_day))        
-        self.sortBtn_status.clicked.connect(lambda: main.sort_sch_listView_status(self, self.listView_day, self.label_day))        
-        self.sortBtn_part.clicked.connect(lambda: main.sort_sch_listView_part(self, self.listView_day, self.label_day))                
-        self.sortBtn_proj.clicked.connect(lambda: main.sort_sch_listView_proj(self, self.listView_day, self.label_day))                
+        self.sortBtn_name.clicked.connect(lambda: main.sort_manager.sort_sch_listView_task(self, self.listView_day, self.label_day))
+        self.sortBtn_status.clicked.connect(lambda: main.sort_manager.sort_sch_listView_status(self, self.listView_day, self.label_day))
+        self.sortBtn_part.clicked.connect(lambda: main.sort_manager.sort_sch_listView_part(self, self.listView_day, self.label_day))
+        self.sortBtn_proj.clicked.connect(lambda: main.sort_manager.sort_sch_listView_proj(self, self.listView_day, self.label_day))                
 
 
     def __del__(self):

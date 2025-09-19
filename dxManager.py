@@ -90,7 +90,6 @@ from tactic_api_client import TacticAPIClient
 from data_manager import DataManager
 from ui_controller import UIController
 from team_manager import TeamManager
-from file_manager import FileManager
 from event_manager import EventManager
 from ui_layout_manager import UILayoutManager
 from validation_manager import ValidationManager
@@ -156,8 +155,6 @@ class DxManager(QMainWindow):
         # 팀 관리자 초기화 (checkUserInfo 호출 전에 초기화 필요)
         self.team_manager = TeamManager(self)
         
-        # 파일 관리자 초기화
-        self.file_manager = FileManager(self)
 
         # UI 레이아웃 관리자 초기화
         self.ui_layout_manager = UILayoutManager(self)
@@ -580,7 +577,22 @@ class DxManager(QMainWindow):
 
     def get_latest_file(self, path):
         """최신 파일 가져오기 및 프리뷰 실행 (FileManager 사용)"""
-        latest_file = self.file_manager.get_latest_file(path)
+        try:
+            if not os.path.exists(path):
+                latest_file = ""
+            else:
+                patterns = ["thumb", "_icon_", "_web_"]
+                all_items = [
+                    os.path.join(path, item)
+                    for item in os.listdir(path)
+                    if not any(pattern in item for pattern in patterns)
+                ]
+                if not all_items:
+                    latest_file = ""
+                else:
+                    latest_file = max(all_items, key=os.path.getmtime)
+        except Exception as e:
+            latest_file = ""
         
         if not latest_file:
             QMessageBox.information(None, "알 림", "프리뷰가 존재하지 않습니다.")
@@ -598,6 +610,100 @@ class DxManager(QMainWindow):
 
 
 
+
+    def backup_schedule(self, save_data, user, backup_dir, backup_name):
+        """스케쥴 데이터 백업"""
+        try:
+            from datetime import datetime
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            backup_path = os.path.join(currentPath, ".backup", backup_dir)
+            backup_file = f"{backup_name}_{timestamp}.json"
+
+            if not os.path.exists(backup_path):
+                os.makedirs(backup_path, exist_ok=True)
+
+            success = self.export_Json(backup_path, backup_file, save_data)
+
+            if success:
+                self.cleanup_old_backups(backup_path, user, 10)
+
+            return success
+
+        except Exception as e:
+            print(f"스케쥴 백업 실패: {e}")
+            return False
+
+    def cleanup_old_backups(self, backup_dir, user, max_backups=10):
+        """오래된 백업 파일 정리"""
+        try:
+            if not os.path.exists(backup_dir):
+                return
+
+            backup_files = sorted(
+                [f for f in os.listdir(backup_dir) if f.startswith(user) and f.endswith('.json')],
+                key=lambda x: os.path.getmtime(os.path.join(backup_dir, x))
+            )
+
+            if len(backup_files) > max_backups:
+                files_to_delete = backup_files[:-max_backups]
+                for file_to_delete in files_to_delete:
+                    file_path = os.path.join(backup_dir, file_to_delete)
+                    os.remove(file_path)
+
+        except Exception as e:
+            print(f"백업 파일 정리 실패: {e}")
+
+    def import_Json(self, path, name):
+        """JSON 파일 가져오기"""
+        try:
+            json_file = os.path.join(path, name)
+            if os.path.exists(json_file):
+                with open(json_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            return []
+        except Exception as e:
+            print(f"JSON 파일 임포트 실패 ({path}/{name}): {e}")
+            return []
+
+    def import_Json_Thread(self, path, name):
+        """쓰레드용 JSON 파일 가져오기"""
+        try:
+            json_file = os.path.join(path, name)
+            if os.path.exists(json_file):
+                with open(json_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            return []
+        except Exception as e:
+            print(f"스레드 JSON 파일 임포트 실패 ({path}/{name}): {e}")
+            return []
+
+    def export_Json(self, path, name, data):
+        """JSON 파일 내보내기"""
+        try:
+            if not os.path.exists(path):
+                os.makedirs(path, exist_ok=True)
+
+            json_file = os.path.join(path, name)
+            with open(json_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            return True
+        except Exception as e:
+            print(f"JSON 파일 익스포트 실패 ({path}/{name}): {e}")
+            return False
+
+    def export_Json_Thread(self, path, name, data):
+        """쓰레드용 JSON 파일 내보내기"""
+        try:
+            if not os.path.exists(path):
+                os.makedirs(path, exist_ok=True)
+
+            json_file = os.path.join(path, name)
+            with open(json_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            return True
+        except Exception as e:
+            print(f"스레드 JSON 파일 익스포트 실패 ({path}/{name}): {e}")
+            return False
 
     def update_splitter_size(self):
         """UILayoutManager로 위임"""
@@ -643,72 +749,6 @@ class DxManager(QMainWindow):
 
 
 
-    # updateJson이나 refreshListViews와 같이 reloadShotListView 메서드를 통해 shotListView를 리프레시하는 경우 이전에 적용된 정렬을 그대로 다시 적용
-    def sortShotlistview(self):
-        """SortManager로 위임"""
-        self.sort_manager.sortShotlistview()
-
-
-    # shotListView의 태스크명 정렬
-    def sort_by_taskName(self):
-        """SortManager로 위임"""
-        self.sort_manager.sort_by_taskName()
-
-
-    # shotListView의 상태명 정렬
-    def sort_by_status(self):
-        """SortManager로 위임"""
-        self.sort_manager.sort_by_status()
-
-
-    # shotListView의 파트명 정렬
-    def sort_by_part(self):
-        """SortManager로 위임"""
-        self.sort_manager.sort_by_part()
-
-
-    # shotListView의 프로젝트명 정렬
-    def sort_by_proj(self):
-        """SortManager로 위임"""
-        self.sort_manager.sort_by_proj()
-
-
-
-
-    # 스케쥴 리스트뷰의 태스크명 정렬
-    def sort_sch_listView_task(self, sche_class, sche_listview, label_day):
-        """SortManager로 위임"""
-        self.sort_manager.sort_sch_listView_task(sche_class, sche_listview, label_day)
-
-
-
-
-    # 스케쥴 리스트뷰의 상태명 정렬
-    def sort_sch_listView_status(self, sche_class, sche_listview, label_day):
-        """SortManager로 위임"""
-        self.sort_manager.sort_sch_listView_status(sche_class, sche_listview, label_day)
-
-
-
-    # 스케쥴 리스트뷰의 part명의 정렬
-    def sort_sch_listView_part(self, sche_class, sche_listview, label_day):
-        """SortManager로 위임"""
-        self.sort_manager.sort_sch_listView_part(sche_class, sche_listview, label_day)
-
-        
-
-    # 스케쥴 리스트뷰의 project명의 정렬
-    def sort_sch_listView_proj(self, sche_class, sche_listview, label_day):
-        """SortManager로 위임"""
-        self.sort_manager.sort_sch_listView_proj(sche_class, sche_listview, label_day)
-
-
-
-
-    # 스케쥴 리스트뷰의 소팅실행
-    def sortScheduleListview(self, listview, model, sortOrder, sortColumn, date=None):
-        """SortManager로 위임"""
-        self.sort_manager.sortScheduleListview(listview, model, sortOrder, sortColumn, date)
 
 
 
@@ -1763,7 +1803,7 @@ class DxManager(QMainWindow):
                     taskList.append(scheduleData)
 
 
-                elif  (self.check_date_exists(taskList, scheduleData) == False):
+                elif  (self.validation_manager.check_date_exists(taskList, scheduleData) == False):
                         taskList.append(scheduleData)
 
 
@@ -1785,12 +1825,12 @@ class DxManager(QMainWindow):
                 for addTask in taskList:
                     if jsonData != []:
                         # 날짜가 존재하는지 확인후 존재하지 않으면 스케쥴에 추가
-                        if  (self.check_date_exists(jsonData, addTask) == False):
+                        if  (self.validation_manager.check_date_exists(jsonData, addTask) == False):
                             jsonData.append(addTask)
 
         
                         # 날짜가 존재하고 아티스트도 같은 태스크가 존재할 경우 
-                        elif (self.check_dateMember_exists(jsonData, addTask) == True):# and self.check_artist_exists(jsonData, addTask) == True):
+                        elif (self.validation_manager.check_dateMember_exists(jsonData, addTask) == True):# and self.check_artist_exists(jsonData, addTask) == True):
                             for data in jsonData:
                                 if data["artist"] == addTask["artist"] and data["year"] == addTask["year"] and data["month"] == addTask["month"] and data["day"] == addTask["day"]:# and data["tasks"] != scheduleData["tasks"]:
                                     if project in data["tasks"][0]:
@@ -1815,7 +1855,7 @@ class DxManager(QMainWindow):
     def get_teamTree_member(self):
 
         # 현재유저의 팀원정보 가져오기
-        teamInfoData = self.getTeamInfo(userID)
+        teamInfoData = self.team_manager.get_team_info(userID)
 
         if userID not in self.memberCache_:
             self.memberCache_[userID] = self.currName_kr
@@ -1831,7 +1871,7 @@ class DxManager(QMainWindow):
         checked_items_list = []
         unchecked_items_list = []
 
-        self.get_treeAll_items(rootItem, checked_items_list, unchecked_items_list, existMember_inJson, teamTreeHierarchy, 0)
+        self.team_manager.get_tree_all_items(rootItem, checked_items_list, unchecked_items_list, existMember_inJson, teamTreeHierarchy, 0)
 
         return checked_items_list, unchecked_items_list
 
@@ -4098,7 +4138,7 @@ class DxManager(QMainWindow):
         checkedMember = []
         invisibleRoot = self.teamTreeModel.invisibleRootItem()
         rootItem = invisibleRoot.child(0)
-        teamInfo = self.getTeamInfo(userID)
+        teamInfo = self.team_manager.get_team_info(userID)
 
         checkedMembers = []
         self.get_CheckedItems(rootItem, checkedMembers)
@@ -4318,7 +4358,7 @@ class DxManager(QMainWindow):
         teamInfo = [{}]
         for mem in list(self.memberCache_.keys()):
 
-            memberInfo = self.getTeamInfo(mem)
+            memberInfo = self.team_manager.get_team_info(mem)
             if memberInfo != []:
                 for teamMem in memberInfo[0]:
                     if teamMem not in teamInfo[0]:
@@ -4448,7 +4488,7 @@ class DxManager(QMainWindow):
                                         and item["day"] == listView_date[i]["day"]]
 
                 # 생성된 task_data의 어싸인 업데이트가 있었는지 확인하고 있었다면, jsonData내의 스케쥴 데이타를 삭제하고, 현재 진행중이던 태스크의 스케쥴생성은 중단함.
-                if self.check__Task_data(task_data, filterDate_inJson, jsonData):
+                if self.validation_manager.check__Task_data(task_data, filterDate_inJson, jsonData):
                     continue
 
                 if jsonData == []:
@@ -4489,7 +4529,7 @@ class DxManager(QMainWindow):
                                             jsonData.append(task_data)
 
                         elif  (task_data not in jsonData): 
-                            if ((self.check_date_exists(jsonData, task_data) == False) or (data["artist"] != member)):
+                            if ((self.validation_manager.check_date_exists(jsonData, task_data) == False) or (data["artist"] != member)):
                                 jsonData.append(task_data)
 
         self.refereshListViews( direction, jsonData)
@@ -4498,26 +4538,6 @@ class DxManager(QMainWindow):
         return jsonData
 
 
-    def check_date_exists(self, json_dicts, task_dict):
-        """ValidationManager로 위임"""
-        return self.validation_manager.check_date_exists(json_dicts, task_dict)
-
-    def check_dateMember_exists(self, json_dicts, task_dict):
-        """ValidationManager로 위임"""
-        return self.validation_manager.check_dateMember_exists(json_dicts, task_dict)
-
-
-                        
-
-
-
-    def check_value_in_lists(self, dic, value):
-        """ValidationManager로 위임"""
-        return self.validation_manager.check_value_in_lists(dic, value)
-
-    def check__Task_data(self, taskData, filterDate_tasks, jsonData):
-        """ValidationManager로 위임"""
-        return self.validation_manager.check__Task_data(taskData, filterDate_tasks, jsonData)
 
 
 
@@ -4838,7 +4858,7 @@ class DxManager(QMainWindow):
             dateDic = {"year":listViewDate[i]["year"], "month":listViewDate[i]["month"], "day":listViewDate[i]["day"]}
 
             if date in sortOrder_date:
-                self.sortScheduleListview(listViews[i], shotList_model, sortOrder_date[date], sortColumn_date[date], dateDic)
+                self.sort_manager.sortScheduleListview(listViews[i], shotList_model, sortOrder_date[date], sortColumn_date[date], dateDic)
 
             # refereshListView 메서드내에서 실행되어 스케쥴데이터가 업데이트될때마다 뷰필터 체크박스를 확인하여 내용을 갱신시킴
             self.set_listView_view(listViews[i], shotList_model)
@@ -4858,7 +4878,7 @@ class DxManager(QMainWindow):
 
 
     # 현재 선택되어 있는 멤버들의 이번주 완료해야할 프로젝트 
-    def get_projs_currentMem(self, taskInfoJson, checked_mem):
+    def get_projs_thisWeek(self, taskInfoJson, checked_mem):
         
         today = datetime.now()
         today_weekday = today.weekday()
@@ -4920,7 +4940,7 @@ class DxManager(QMainWindow):
 
         #selected_mem = []
         projs_currentMem = []
-        projs_currentMem = self.get_projs_currentMem(taskInfoJson, checkedList_EN)
+        projs_currentMem = self.get_projs_thisWeek(taskInfoJson, checkedList_EN)
         projLong_list = []
 
         for memEN in checkedList_EN:
@@ -4996,6 +5016,8 @@ class DxManager(QMainWindow):
 
     def getProjs_Mem(self, taskInfoJson, memEN, deselectAll=None, unchecked=None, teamMember=None) :
 
+        #print (self.currentProjs)
+
         # 팀 트리뷰에서 체크된 멤버 리스트 읽어오기
         invisibleRoot = self.teamTreeModel.invisibleRootItem()
         rootItem = invisibleRoot.child(0)
@@ -5018,7 +5040,9 @@ class DxManager(QMainWindow):
         projs_currentMem = []
 
         # 현재 멤버가 체크박스 on인경우 어싸인되어 있는 프로젝트들중 이번주 완료해야할 태스크가 있는 프로젝트들을 가져옴
-        projs_currentMem = self.get_projs_currentMem(taskInfoJson, checkedList_EN)
+        projs_currentMem = self.get_projs_thisWeek(taskInfoJson, checkedList_EN)
+
+
         if memEN in taskInfoJson:
 
             df_taskInfo = pd.DataFrame(taskInfoJson[memEN])
@@ -5063,7 +5087,6 @@ class DxManager(QMainWindow):
                     projLong_list.append(self.projects[proj][1])
 
 
-
             # 뽑아낸 프로젝트 이름을 이용하여 UI상의 프로젝트 리스트뷰에서 해당 프로젝트를 선택
             proj_model = self.projListview.model()
 
@@ -5082,33 +5105,87 @@ class DxManager(QMainWindow):
 
 
         elif memEN not in taskInfoJson:
+
             projLong_list = []
             currentProj_long_list = []
 
-            if projs_currentMem:
-                for proj in projs_currentMem:
-                    projLong_list.append(self.projects[proj][1])
+            # 현재  특정멤저의 체크박스를 해제한상태(taskInfoJson  에 memEN이 없는상태) 이므로 그외 남은  멤버의 프로젝트  선택된 상태
+            for member in checkedList_EN:
+                projLong_list = self.get_projects_3Weeks(member, lastWeek_monday, nextWeek_friday, projs_currentMem)
+
 
             if projs_currentMem:
                 self.currentProjs = [proj for proj in self.currentProjs if proj in projs_currentMem]
             else:
                 self.currentProjs = []
 
+
             proj_model = self.projListview.model()
             exceptCurrentProj = []
 
-            for row in range(proj_model.rowCount()):
-                index = proj_model.index(row, 0)
-                text_proj = proj_model.data(index)
-                if text_proj != '관리개발 (testShot)' and text_proj in projLong_list:
-                    if not self.projSelection_model.isSelected(index):
-                        self.projSelection_model.select(index, QItemSelectionModel.Select)
+            if projLong_list == None:
+                self.projListview.clearSelection()
 
-                elif text_proj != '관리개발 (testShot)' and text_proj not in projLong_list:# and text_proj in currentProj_long_list:
-                    self.projSelection_model.select(index, QItemSelectionModel.Deselect)
+
+            else:
+                for row in range(proj_model.rowCount()):
+                    index = proj_model.index(row, 0)
+                    text_proj = proj_model.data(index)
+                    if text_proj != '관리개발 (testShot)' and text_proj in projLong_list:
+                        if not self.projSelection_model.isSelected(index):
+                            self.projSelection_model.select(index, QItemSelectionModel.Select)
+
+                    elif text_proj != '관리개발 (testShot)' and text_proj not in projLong_list:# and text_proj in currentProj_long_list:
+                        self.projSelection_model.select(index, QItemSelectionModel.Deselect)
 
             # 샷리스트뷰 셋업이 끝난뒤 projLong_list 초기화
             projLong_list = []
+
+
+
+
+
+    def get_projects_3Weeks(self, memEN, lastWeek_monday, nextWeek_friday, projs_currentMem):
+
+        projLong_list = []
+        # 이번주를 포함한 지난주 다음주 3주간의 스케쥴이 어싸인되어있는 프로젝트를 찾아 task_3w 에 저장
+        tasks_3w = []
+        if jsonData != []:
+            for data in jsonData:
+                data_date = QDate(data["year"], data["month"], data["day"])
+                if lastWeek_monday <= data_date <= nextWeek_friday and data['artist'] == memEN:
+                    tasks_3w.append(data)
+
+        for task_3w in tasks_3w:
+            if task_3w["tasks"]:
+                for proj in list(task_3w["tasks"][0].keys()):
+                    if proj not in projs_currentMem:
+                        projs_currentMem.append(proj)
+
+        for proj in projs_currentMem:                    
+            if proj in self.projects:
+                projLong_list.append(self.projects[proj][1])
+
+
+        if projLong_list:
+            return projLong_list
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -5714,27 +5791,21 @@ class DxManager(QMainWindow):
 
         # 프로젝트 자동선택이 켜져있고있고, 트리뷰 컨택스트 메뉴실행이 아닌상태이고, 싱글 멤버 선택인 경우
         elif self.ui.sel_allProj_checkBox.checkState() == Qt.Checked and self.select_ctxMenu == 0: # and len(checked_items_list) == 1 or len(checked_items_list) == 0:
+
             self.reloadShotList()
             items = len(checked_items_list)
             self.sel_assigned_proj("single", index, items)
-
+            #self.refereshListViews(0, jsonData)            
 
 
     # 제이슨으로 저장된 리더의 팀멤버가 있다면 정보를 읽어옴
-    def getTeamInfo(self, member): 
-        """팀 멤버의 정보를 JSON 파일에서 로드합니다."""
-        return self.team_manager.get_team_info(member)
-
-
-
-
 
     def edit_teamTree_item(self, parent_root):
 
         global teamInfo_
 
         # 현재유저의 팀원정보 가져오기
-        teamInfoData = self.getTeamInfo(userID)
+        teamInfoData = self.team_manager.get_team_info(userID)
 
         if userID not in self.memberCache_:
             self.memberCache_[userID] = self.currName_kr
@@ -5763,7 +5834,7 @@ class DxManager(QMainWindow):
         checked_items_list = []
         unchecked_items_list = []
 
-        new_hierarchy = self.get_treeAll_items(rootItem, checked_items_list, unchecked_items_list, existMember_inJson, teamTreeHierarchy, 0)
+        new_hierarchy = self.team_manager.get_tree_all_items(rootItem, checked_items_list, unchecked_items_list, existMember_inJson, teamTreeHierarchy, 0)
 
         # 중복되는 멤버의 경우 teamInfo파일에는 json형태로 존재하지만, treeView에는 표시되지 않고 있던 상태에서,
         # 중복되는 멤버중 하나를 삭제해서 원래있던 멤버가 다시 treeView에 표시되게 하기 위해, 트리뷰에서 현재 안보이는 상태의 멤버의 이름을,
@@ -5884,7 +5955,7 @@ class DxManager(QMainWindow):
 
         hi = hi+1
         added_memberList = []
-        member_teamInfo = self.getTeamInfo(teamMember)
+        member_teamInfo = self.team_manager.get_team_info(teamMember)
         if member_teamInfo != []:
             for info_member in list(member_teamInfo[0].keys()):
                 allInfos[0][info_member] = member_teamInfo[0][info_member]
@@ -5933,9 +6004,6 @@ class DxManager(QMainWindow):
 
 
     # 트리뷰의 하위 멤버를 모두 읽어오기 위한 재귀함수
-    def get_treeAll_items(self, item, checkedItems, uncheckedItems, existMember, hierarchy, hi): 
-        """팀 관리자의 get_tree_all_items 메소드를 호출합니다."""
-        return self.team_manager.get_tree_all_items(item, checkedItems, uncheckedItems, existMember, hierarchy, hi)        
 
 
     # 리스트를 값으로 가지고 있는 딕셔너리 안에 특정 값이 존재하는지 확인하는 메서드
@@ -5963,7 +6031,7 @@ class DxManager(QMainWindow):
         #####################################################################################################
 
         ## 멤버가 추가되거나 삭제되는 경우에 멤버트리뷰를 갱신하고, 전역변수 teamTreeHierarchy 에도 멤버 변동사항을 적용함.
-        teamInfoData = self.getTeamInfo(userID)
+        teamInfoData = self.team_manager.get_team_info(userID)
 
         invisibleRoot = self.teamTreeModel.invisibleRootItem()
         rootItem = invisibleRoot.child(0)
@@ -6196,42 +6264,24 @@ class DxManager(QMainWindow):
 
 
     # 백업파일 생성
-    def backup_schedule(self, saveData, user, backup_dir, backup_name):
-        """스케줄 백업 (FileManager 사용)"""
-        return self.file_manager.backup_schedule(saveData, user, backup_dir, backup_name)
 
 
     # 백업파일의 오래된 파일 삭제
-    def cleanup_old_backups(self, backup_dir, user, max_backups):
-        """오래된 백업 파일 정리 (FileManager 사용)"""
-        return self.file_manager.cleanup_old_backups(backup_dir, user, max_backups)
 
 
-
-
-    def import_Json(self, path, name): 
-        """JSON 파일 임포트 (FileManager 사용)"""
-        return self.file_manager.import_json(path, name)
-
-
-    # 이벤트루프와 쓰레드가 동시에 사용하게 되면 충돌이 생기는것으로 보여 다른이름으로 만든 import_Json과 동일한 메서드
-    def import_Json_Thread(self, path, name): 
-        """스레드용 JSON 파일 임포트 (FileManager 사용)"""
-        return self.file_manager.import_json_thread(path, name)
 
 
 
 
-    def export_Json(self, path, name, data):
-        """JSON 파일 익스포트 (FileManager 사용)"""
-        return self.file_manager.export_json(path, name, data)
+    # 이벤트루프와 쓰레드가 동시에 사용하게 되면 충돌이 생기는것으로 보여 다른이름으로 만든 import_Json과 동일한 메서드
+
+
+
+
 
 
 
     # 이벤트루프와 쓰레드가 동시에 사용하게 되면 충돌이 생기는것으로 보여 다른이름으로 만든 export_Json과 동일한 메서드
-    def export_Json_Thread(self, path, name, data):
-        """스레드용 JSON 파일 익스포트 (FileManager 사용)"""
-        return self.file_manager.export_json_thread(path, name, data)
 
 
 
@@ -6261,7 +6311,7 @@ class DxManager(QMainWindow):
 
         teamInfo = [{}]
         for mem in list(self.memberCache_.keys()):
-            memberInfo = self.getTeamInfo(mem)
+            memberInfo = self.team_manager.get_team_info(mem)
             if memberInfo != []:
                 for teamMem in memberInfo[0]:
                     if teamMem not in teamInfo[0]:
@@ -6318,7 +6368,7 @@ class DxManager(QMainWindow):
 
         teamInfo = [{}]
         for mem in list(self.memberCache_.keys()):
-            memberInfo = self.getTeamInfo(mem)
+            memberInfo = self.team_manager.get_team_info(mem)
             if memberInfo != []:
                 for teamMem in memberInfo[0]:
                     if teamMem not in teamInfo[0]:
@@ -6378,7 +6428,7 @@ class DxManager(QMainWindow):
             self.shotListview.setEditTriggers(QAbstractItemView.NoEditTriggers) # 리스트뷰내 아이템을 더블클릭하였을때 편집모드가 작동되지 않도록 함
 
             # 리프레시 되기전의 정렬상태와 같이 일치시키기
-            self.sortShotlistview()
+            self.sort_manager.sortShotlistview()
 
             # 리프레시 하기전 셀렉트 되어있던 상태대로 다시 셀렉팅
             if (shotlist_model != None):
@@ -6461,7 +6511,7 @@ class DxManager(QMainWindow):
     # 멤버 트리뷰의 선택한 인덱스의 태스크 정보를 읽어오기 
     def getTaskInfo_member(self, index):
 
-        teamInfo = self.getTeamInfo(userID)
+        teamInfo = self.team_manager.get_team_info(userID)
 
         itemChecked = self.teamTreeModel.data(index, Qt.CheckStateRole)
         if itemChecked == 2:

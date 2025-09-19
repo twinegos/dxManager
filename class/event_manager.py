@@ -116,10 +116,10 @@ class EventManager:
         self.main_window.dataInfoBtn.clicked.connect(self.main_window.showWorkdataWin)
 
         # 정렬 버튼 연결
-        self.main_window.ui.sortBtn_name.clicked.connect(self.main_window.sort_by_taskName)
-        self.main_window.ui.sortBtn_status.clicked.connect(self.main_window.sort_by_status)
-        self.main_window.ui.sortBtn_part.clicked.connect(self.main_window.sort_by_part)
-        self.main_window.ui.sortBtn_proj.clicked.connect(self.main_window.sort_by_proj)
+        self.main_window.ui.sortBtn_name.clicked.connect(self.main_window.sort_manager.sort_by_taskName)
+        self.main_window.ui.sortBtn_status.clicked.connect(self.main_window.sort_manager.sort_by_status)
+        self.main_window.ui.sortBtn_part.clicked.connect(self.main_window.sort_manager.sort_by_part)
+        self.main_window.ui.sortBtn_proj.clicked.connect(self.main_window.sort_manager.sort_by_proj)
 
         # 콤보박스 연결
         self.main_window.comboDay.currentIndexChanged.connect(self.main_window.changeComboDate)
