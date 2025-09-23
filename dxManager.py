@@ -589,9 +589,6 @@ class DxManager(QMainWindow):
 
 
 
-    def update_splitter_size(self):
-        """UILayoutManager로 위임"""
-        self.ui_layout_manager.update_splitter_size()
 
 
 
@@ -2962,9 +2959,6 @@ class DxManager(QMainWindow):
           
 
 
-    def rescaleListView(self, scaleUI, fontScale):
-        """UILayoutManager로 위임"""
-        self.ui_layout_manager.rescale_listview(scaleUI, fontScale)
 
 
 
@@ -3066,8 +3060,8 @@ class DxManager(QMainWindow):
                 self.manager.Move_sideway_setContainer(frame, layout)
 
         self.refereshListViews(0, jsonData)
-        self.update_splitter_size() # 생성된 리스트뷰들의 갯수의 합보다 scroll area 의 크기를 더크게 셋팅하여 splitter 작동되도록 함
-        self.reset_splitter_size() # 스케쥴 리스트뷰의 스플리터 사이즈 리셋
+        self.ui_layout_manager.update_splitter_size() # 생성된 리스트뷰들의 갯수의 합보다 scroll area 의 크기를 더크게 셋팅하여 splitter 작동되도록 함
+        self.ui_layout_manager.reset_splitter_size() # 스케쥴 리스트뷰의 스플리터 사이즈 리셋
 
 
 
@@ -3135,7 +3129,7 @@ class DxManager(QMainWindow):
         self.update_range_Label(newRangeStartDate, newRangeEndDate)
         self.rangeEndDate = newRangeEndDate
 
-        self.reset_splitter_size() # 스케쥴 리스트뷰의 스플리터 사이즈 리셋
+        self.ui_layout_manager.reset_splitter_size() # 스케쥴 리스트뷰의 스플리터 사이즈 리셋
 
 
 
@@ -3795,7 +3789,7 @@ class DxManager(QMainWindow):
                     widget.setStyleSheet("background-color: #38613b;")
                     self.manager.set_active_container(frame, layout, False)
 
-        self.update_splitter_size() # 생성된 리스트뷰들의 갯수의 합보다 scroll area 의 크기를 더크게 셋팅하여 splitter 작동되도록 함
+        self.ui_layout_manager.update_splitter_size() # 생성된 리스트뷰들의 갯수의 합보다 scroll area 의 크기를 더크게 셋팅하여 splitter 작동되도록 함
 
 
 
@@ -4593,16 +4587,13 @@ class DxManager(QMainWindow):
             self.set_itemBackgroundColor(shotlist_model, listViewDate[i],listViews[i])
             self.set_listView_view(listViews[i], shotlist_model)
 
-        self.reset_splitter_size() # 스케쥴 리스트뷰의 스플리터 사이즈 리셋
+        self.ui_layout_manager.reset_splitter_size() # 스케쥴 리스트뷰의 스플리터 사이즈 리셋
 
         return movedDate
 
 
 
     # 스케쥴 리스트뷰의 스플리터 사이즈 리셋
-    def reset_splitter_size(self):
-        """UILayoutManager로 위임"""
-        self.ui_layout_manager.reset_splitter_size()
 
 
 

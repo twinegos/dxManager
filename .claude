@@ -74,22 +74,41 @@
 9. **✅ FileManager** (2025-09-23): 파일 입출력 관리 (7개 메서드)
 
 #### 라인수 현황
-- **dxManager.py**: 7,021라인 (102라인 감소)
+- **dxManager.py**: 7,012라인 (9라인 추가 감소 - UILayoutManager 위임 메서드 제거)
 - **분리된 클래스 파일들**: 총 9개 파일
-- **전체 모듈화 진행률**: 약 30% 완료
+- **전체 모듈화 진행률**: 약 32% 완료
 
-### 다음 작업 계획
-#### 위임 메서드 제거 대상 (나머지 Manager들)
-1. **SortManager**: 10개 메서드
-2. **ValidationManager**: 4개 메서드
-3. **TeamManager**: 5개 메서드
-4. **EventManager**: 1개 메서드 (위임 메서드 확인 필요)
-5. **UILayoutManager**: 3개 메서드
+### ✅ 위임 메서드 제거 작업 완료 (2025-09-23)
 
-#### 추가 분리 후보 클래스들
-1. **UIManager**: UI 관련 메서드들 추가 분리
-2. **ScheduleManager**: 스케줄 관리 핵심 로직
-3. **ProjectManager**: 프로젝트 관리 로직
+#### 완료된 작업
+1. **SortManager**: 위임 메서드 없음 - 이미 직접 호출 방식
+2. **ValidationManager**: 위임 메서드 없음 - 이미 직접 호출 방식
+3. **TeamManager**: 위임 메서드 없음 - 이미 직접 호출 방식
+4. **EventManager**: 위임 메서드 없음 - 이미 직접 호출 방식
+5. **✅ UILayoutManager**: 3개 위임 메서드 제거 완료
+   - `update_splitter_size()` 제거
+   - `rescaleListView()` 제거
+   - `reset_splitter_size()` 제거
+
+### 다음 분리 계획 수립 (2025-09-23)
+
+#### 추가 분리 후보 클래스들 분석 완료
+
+1. **UIManager** (우선 추천 - 12개 메서드)
+   - ListView 관리 전담: `addListView`, `removeListView`, `makeListView` 등
+   - 낮은 위험성: UI 관련 메서드들로 데이터 로직과 분리도 높음
+   - 메서드: `changeListViewUI_notTracking`, `changeListViewUI_`, `addListView`, `removeListView`, `makeListView`, `getListViewItem_inJson`, `getListViewItem`, `getListView_selectedItem`, `getCurrentListViewDate`, `setListviewLineEdit`, `set_listView_view`, `setUp_listViewUI`
+
+2. **ProjectManager** (중간 위험성 - 8개 메서드)
+   - 프로젝트 선택, 필터링, 조회 관리
+   - 메서드: `process_sel_project`, `get_selected_projects`, `get_projs_thisWeek`, `getProjs_Mem_selAll`, `getProjs_Mem`, `get_projects_3Weeks`, `sel_assigned_proj`, `findProj`
+
+3. **ScheduleManager** (높은 위험성 - 9개 메서드)
+   - 스케줄 핵심 로직 (민감한 `reloadShotList` 포함)
+   - 메서드: `makeMirrorSchedule`, `delete_schedule`, `find_schedule`, `add_schedule`, `set_schedule_StartEnd`, `move_sideways`, `refereshListViews`, `scheduleExportJson`, `reloadShotList`
+
+#### 분리 작업 우선순위
+1. **UIManager** → 2. **ProjectManager** → 3. **ScheduleManager**
 
 ### 교훈
 1. **클래스 분리 != 항상 좋음**: 일부 기능은 원래 위치가 더 안정적
@@ -105,8 +124,8 @@
 
 ### Git 상태
 - **현재 브랜치**: main
-- **마지막 작업**: FileManager 클래스 재분리 및 위임 메서드 제거 완료
-- **다음 작업**: 나머지 Manager 클래스들의 위임 메서드 제거
+- **마지막 작업**: 위임 메서드 제거 작업 완료 (UILayoutManager 3개 메서드)
+- **다음 작업**: 추가 클래스 분리 (UIManager, ScheduleManager, ProjectManager)
 
 ### 성공 요인 분석 (FileManager 재분리)
 1. **단계적 접근**: 한번에 모든 메서드를 분리하지 않고 그룹별로 진행
