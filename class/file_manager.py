@@ -24,187 +24,132 @@ class FileManager:
         self.data_manager = DataManager(main_window)
         
     def get_latest_file(self, path):
-        """
-        지정된 경로에서 가장 최신 파일을 가져옵니다.
-        thumb, _icon_, _web_ 패턴이 포함된 파일은 제외합니다.
-        
-        Args:
-            path (str): 파일을 검색할 경로
-            
-        Returns:
-            str: 가장 최신 파일의 전체 경로
-        """
+        """최신 파일 가져오기 및 프리뷰 실행"""
         try:
             if not os.path.exists(path):
-                logging.error(f"경로가 존재하지 않음: {path}")
-                return ""
-                
-            patterns = ["thumb", "_icon_", "_web_"]
-            
-            all_items = [
-                os.path.join(path, item) 
-                for item in os.listdir(path) 
-                if not any(pattern in item for pattern in patterns)
-            ]
-            
-            if not all_items:
-                return ""
-                
-            # 수정 시간 기준으로 가장 최신 파일 반환
-            latest_file = max(all_items, key=os.path.getmtime)
-            return latest_file
-            
+                latest_file = ""
+            else:
+                patterns = ["thumb", "_icon_", "_web_"]
+                all_items = [
+                    os.path.join(path, item)
+                    for item in os.listdir(path)
+                    if not any(pattern in item for pattern in patterns)
+                ]
+                if not all_items:
+                    latest_file = ""
+                else:
+                    latest_file = max(all_items, key=os.path.getmtime)
         except Exception as e:
-            logging.error(f"최신 파일 검색 실패 ({path}): {e}")
-            return ""
+            latest_file = ""
+
+        if not latest_file:
+            from PySide2.QtWidgets import QMessageBox
+            QMessageBox.information(None, "알 림", "프리뷰가 존재하지 않습니다.")
+            return
+
+        # 프리뷰 실행
+        import subprocess
+
+        if os.path.isdir(latest_file):
+            subprocess.run(["xdg-open", str(latest_file)], check=True)
+        elif os.path.isfile(latest_file) and latest_file.lower().endswith((".mov", ".mp4", ".jpg", "jpeg", "png", "exr")):
+            cmd = ["/backstage/dcc/DCC", "rez-env", "rv-1.0.0", "--", "rv", latest_file]
+            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            stdout, stderr = process.communicate()
     
-    def import_json(self, path, name):
-        """
-        JSON 파일을 임포트합니다.
-        
-        Args:
-            path (str): JSON 파일이 있는 디렉토리 경로
-            name (str): JSON 파일명
-            
-        Returns:
-            dict/list: 로드된 JSON 데이터
-        """
+    def import_Json(self, path, name):
+        """JSON 파일 가져오기"""
         try:
             json_file = os.path.join(path, name)
-            return self.data_manager.load_json_data(json_file)
-            
+            if os.path.exists(json_file):
+                with open(json_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            return []
         except Exception as e:
-            logging.error(f"JSON 파일 임포트 실패 ({path}/{name}): {e}")
-            return None
+            print(f"JSON 파일 임포트 실패 ({path}/{name}): {e}")
+            return []
     
-    def import_json_thread(self, path, name):
-        """
-        스레드용 JSON 파일 임포트 (동시성 문제 방지를 위한 별도 메소드)
-        
-        Args:
-            path (str): JSON 파일이 있는 디렉토리 경로
-            name (str): JSON 파일명
-            
-        Returns:
-            dict/list: 로드된 JSON 데이터
-        """
+    def import_Json_Thread(self, path, name):
+        """쓰레드용 JSON 파일 가져오기"""
         try:
             json_file = os.path.join(path, name)
-            return self.data_manager.load_json_data(json_file)
-            
+            if os.path.exists(json_file):
+                with open(json_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            return []
         except Exception as e:
-            logging.error(f"스레드 JSON 파일 임포트 실패 ({path}/{name}): {e}")
-            return None
+            print(f"스레드 JSON 파일 임포트 실패 ({path}/{name}): {e}")
+            return []
     
-    def export_json(self, path, name, data):
-        """
-        데이터를 JSON 파일로 익스포트합니다.
-        
-        Args:
-            path (str): JSON 파일을 저장할 디렉토리 경로
-            name (str): JSON 파일명
-            data: 저장할 데이터
-            
-        Returns:
-            bool: 저장 성공 여부
-        """
+    def export_Json(self, path, name, data):
+        """JSON 파일 내보내기"""
         try:
             if not os.path.exists(path):
                 os.makedirs(path, exist_ok=True)
-                
+
             json_file = os.path.join(path, name)
-            return self.data_manager.save_json_data(data, json_file)
-            
+            with open(json_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            return True
         except Exception as e:
-            logging.error(f"JSON 파일 익스포트 실패 ({path}/{name}): {e}")
+            print(f"JSON 파일 익스포트 실패 ({path}/{name}): {e}")
             return False
     
-    def export_json_thread(self, path, name, data):
-        """
-        스레드용 JSON 파일 익스포트 (동시성 문제 방지를 위한 별도 메소드)
-        
-        Args:
-            path (str): JSON 파일을 저장할 디렉토리 경로
-            name (str): JSON 파일명
-            data: 저장할 데이터
-            
-        Returns:
-            bool: 저장 성공 여부
-        """
+    def export_Json_Thread(self, path, name, data):
+        """쓰레드용 JSON 파일 내보내기"""
         try:
             if not os.path.exists(path):
                 os.makedirs(path, exist_ok=True)
-                
+
             json_file = os.path.join(path, name)
-            return self.data_manager.save_json_data(data, json_file)
-            
+            with open(json_file, 'w', encoding='utf-8') as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            return True
         except Exception as e:
-            logging.error(f"스레드 JSON 파일 익스포트 실패 ({path}/{name}): {e}")
+            print(f"스레드 JSON 파일 익스포트 실패 ({path}/{name}): {e}")
             return False
     
     def backup_schedule(self, save_data, user, backup_dir, backup_name):
-        """
-        스케줄 데이터를 백업합니다.
-        
-        Args:
-            save_data: 백업할 데이터
-            user (str): 사용자 ID
-            backup_dir (str): 백업 디렉토리명
-            backup_name (str): 백업 파일명 접두어
-            
-        Returns:
-            bool: 백업 성공 여부
-        """
+        """스케쥴 데이터 백업"""
         try:
+            from datetime import datetime
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             backup_path = os.path.join(self.current_path, ".backup", backup_dir)
             backup_file = f"{backup_name}_{timestamp}.json"
-            
+
             if not os.path.exists(backup_path):
                 os.makedirs(backup_path, exist_ok=True)
-                
-            success = self.export_json(backup_path, backup_file, save_data)
-            
+
+            success = self.export_Json(backup_path, backup_file, save_data)
+
             if success:
-                # 오래된 백업 파일들 정리
                 self.cleanup_old_backups(backup_path, user, 10)
-                logging.info(f"스케줄 백업 완료: {backup_path}/{backup_file}")
-            
+
             return success
-            
+
         except Exception as e:
-            logging.error(f"스케줄 백업 실패: {e}")
+            print(f"스케쥴 백업 실패: {e}")
             return False
     
     def cleanup_old_backups(self, backup_dir, user, max_backups=10):
-        """
-        오래된 백업 파일들을 정리합니다.
-        
-        Args:
-            backup_dir (str): 백업 디렉토리 경로
-            user (str): 사용자 ID
-            max_backups (int): 최대 보관할 백업 파일 수 (기본 10개)
-        """
+        """오래된 백업 파일 정리"""
         try:
             if not os.path.exists(backup_dir):
                 return
-                
-            # 백업 디렉토리의 파일 목록 가져오기 (수정 시간 순으로 정렬)
+
             backup_files = sorted(
                 [f for f in os.listdir(backup_dir) if f.startswith(user) and f.endswith('.json')],
                 key=lambda x: os.path.getmtime(os.path.join(backup_dir, x))
             )
-            
-            # 최대 개수를 초과하는 오래된 파일들 삭제
+
             if len(backup_files) > max_backups:
                 files_to_delete = backup_files[:-max_backups]
                 for file_to_delete in files_to_delete:
                     file_path = os.path.join(backup_dir, file_to_delete)
                     os.remove(file_path)
-                    logging.info(f"오래된 백업 파일 삭제: {file_path}")
-                    
+
         except Exception as e:
-            logging.error(f"백업 파일 정리 실패: {e}")
+            print(f"백업 파일 정리 실패: {e}")
     
     def save_file_with_backup(self, data, user_id):
         """

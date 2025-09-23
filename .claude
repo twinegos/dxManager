@@ -24,29 +24,23 @@
 - pandas, openpyxl (데이터 처리)
 - TACTIC API 연동
 
-## FileManager 위임 메서드 제거 작업 완료 (2025-09-19)
+## FileManager 클래스 분리 완료 (2025-09-23)
 
-### 버그 발생 및 문제 해결
+### 이전 시도와 문제점 (2025-09-19)
 
-#### 발견된 버그
+#### 발견된 버그 (이전 시도)
 - **문제**: 팀원 체크박스 토글 시 스케쥴 태스크가 불규칙하게 나타나거나 사라지는 현상
 - **발견 시점**: FileManager 클래스 위임 메서드 제거 후 외부 테스트
-- **초기 가설**: FileManager 위임 메서드 제거 과정에서 발생한 문제
+- **해결**: FileManager 클래스 분리 자체를 완전 원복
 
-#### 디버깅 과정
-1. **FileManager 위임 메서드 제거 원복**: 모든 변경사항을 원래대로 되돌림
-2. **버그 지속 확인**: 원복 후에도 동일한 버그 발생
-3. **근본 원인 파악**: FileManager 클래스 분리 자체가 문제의 원인
-4. **FileManager 클래스 분리 완전 원복**: 클래스 분리 이전 상태로 복구
+### FileManager 클래스 재분리 성공 (2025-09-23)
 
-### FileManager 클래스 분리 완전 원복 완료
+#### 성공한 접근 방식
+1. **단계적 분리**: 메서드 그룹별로 나누어 분리 진행
+2. **외부 테스트**: 각 단계마다 팀원 체크박스 토글 기능 확인
+3. **위임 메서드 제거**: 분리 완료 후 직접 호출 방식으로 변경
 
-#### 제거된 사항
-1. **FileManager 클래스 import 제거**: `from file_manager import FileManager` 제거
-2. **FileManager 인스턴스 초기화 제거**: `self.file_manager = FileManager(self)` 제거
-3. **class/file_manager.py 파일**: 별도 클래스 파일 제거
-
-#### 복원된 메서드들 (dxManager.py에 직접 구현)
+#### 분리된 FileManager 메서드들 (7개)
 1. **`get_latest_file(path)`** - 최신 파일 가져오기 + 프리뷰 실행
 2. **`backup_schedule(save_data, user, backup_dir, backup_name)`** - 스케줄 백업
 3. **`cleanup_old_backups(backup_dir, user, max_backups=10)`** - 백업 파일 정리
@@ -55,14 +49,20 @@
 6. **`export_Json(path, name, data)`** - JSON 파일 저장
 7. **`export_Json_Thread(path, name, data)`** - 스레드용 JSON 저장
 
+#### 구현 세부사항
+- **파일 위치**: `/class/file_manager.py` (258라인)
+- **import 추가**: `from file_manager import FileManager`
+- **인스턴스 초기화**: `self.file_manager = FileManager(self)`
+- **메서드 호출 변경**: 50개 호출을 `self.file_manager.method_name()` 형태로 변경
+
 #### 원래 메서드 명명 규칙 유지
 - `import_Json` (대문자 J)
 - `export_Json` (대문자 J)
 - `import_Json_Thread` (대문자 J, T)
 - `export_Json_Thread` (대문자 J, T)
 
-### 현재 상태 (2025-09-19)
-#### 분리 완료된 클래스들 (8개)
+### 현재 상태 (2025-09-23)
+#### 분리 완료된 클래스들 (9개)
 1. **TacticAPIClient** (2025-09-08): TACTIC API 통신
 2. **DataManager** (2025-09-09): JSON 데이터 처리
 3. **UIController** (2025-09-09): UI 관리 기본 구조
@@ -71,21 +71,25 @@
 6. **SortManager** (2025-09-16): 정렬 기능 (10개 메서드)
 7. **UILayoutManager** (2025-09-17): UI 레이아웃 (3개 메서드)
 8. **ValidationManager** (2025-09-17): 데이터 검증 (4개 메서드)
+9. **✅ FileManager** (2025-09-23): 파일 입출력 관리 (7개 메서드)
 
-#### ❌ 제거된 클래스
-- **~~FileManager~~**: 클래스 분리 자체를 완전 원복 (버그 해결)
+#### 라인수 현황
+- **dxManager.py**: 7,021라인 (102라인 감소)
+- **분리된 클래스 파일들**: 총 9개 파일
+- **전체 모듈화 진행률**: 약 30% 완료
 
 ### 다음 작업 계획
-#### 작업 순서 (사용자 요청)
-1. **FileManager 클래스 재분리**: 클래스 분리부터 다시 시작
-2. **위임 메서드 제거**: 분리 후 위임 메서드들을 직접 호출로 변경
-
-#### 위임 메서드 제거 대상 (다른 Manager들)
+#### 위임 메서드 제거 대상 (나머지 Manager들)
 1. **SortManager**: 10개 메서드
 2. **ValidationManager**: 4개 메서드
 3. **TeamManager**: 5개 메서드
-4. **EventManager**: 1개 메서드
+4. **EventManager**: 1개 메서드 (위임 메서드 확인 필요)
 5. **UILayoutManager**: 3개 메서드
+
+#### 추가 분리 후보 클래스들
+1. **UIManager**: UI 관련 메서드들 추가 분리
+2. **ScheduleManager**: 스케줄 관리 핵심 로직
+3. **ProjectManager**: 프로젝트 관리 로직
 
 ### 교훈
 1. **클래스 분리 != 항상 좋음**: 일부 기능은 원래 위치가 더 안정적
@@ -101,5 +105,11 @@
 
 ### Git 상태
 - **현재 브랜치**: main
-- **마지막 작업**: 버그 수정 및 FileManager 클래스 분리 원복 완료
-- **다음 작업**: FileManager 클래스 재분리부터 시작
+- **마지막 작업**: FileManager 클래스 재분리 및 위임 메서드 제거 완료
+- **다음 작업**: 나머지 Manager 클래스들의 위임 메서드 제거
+
+### 성공 요인 분석 (FileManager 재분리)
+1. **단계적 접근**: 한번에 모든 메서드를 분리하지 않고 그룹별로 진행
+2. **지속적 테스트**: 각 단계마다 핵심 기능(팀원 체크박스 토글) 확인
+3. **메서드 구현 일치**: 원본과 100% 동일하게 구현하여 동작 보장
+4. **직접 호출 방식**: 위임 메서드 제거 후 `self.file_manager.method_name()` 직접 호출

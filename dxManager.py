@@ -93,6 +93,7 @@ from team_manager import TeamManager
 from event_manager import EventManager
 from ui_layout_manager import UILayoutManager
 from validation_manager import ValidationManager
+from file_manager import FileManager
 
 userID = config.get_user_id()
 
@@ -158,6 +159,9 @@ class DxManager(QMainWindow):
 
         # UI 레이아웃 관리자 초기화
         self.ui_layout_manager = UILayoutManager(self)
+
+        # FileManager 클래스 초기화
+        self.file_manager = FileManager(self)
 
         self.currName_kr, self.role, self.team, self.job, self.department = self.checkUserInfo(userID) # 현재유저의 정보 가져오기
 
@@ -538,7 +542,7 @@ class DxManager(QMainWindow):
                 shot_worksPath = shot_worksPath+"/"+context_name
 
                 if os.path.exists(shot_worksPath):
-                    self.get_latest_file(shot_worksPath)
+                    self.file_manager.get_latest_file(shot_worksPath)
 
                 elif os.path.exists(shot_worksPath) == False:
                     QMessageBox.information(None, "알 림", "프리뷰가 존재하지 않습니다.")
@@ -550,7 +554,7 @@ class DxManager(QMainWindow):
                 edit_path = default_path + "/shot/"+task_name+"/publish/edit/"
 
                 if os.path.exists(edit_path) == True:
-                    self.get_latest_file(edit_path)
+                    self.file_manager.get_latest_file(edit_path)
 
                 else:
                     QMessageBox.information(None, "알 림", "프리뷰가 존재하지 않습니다.")
@@ -567,7 +571,7 @@ class DxManager(QMainWindow):
             asset_worksPath = asset_worksPath+"/"+context_name
 
             if os.path.exists(asset_worksPath):
-                self.get_latest_file(asset_worksPath)
+                self.file_manager.get_latest_file(asset_worksPath)
 
 
 
@@ -575,135 +579,15 @@ class DxManager(QMainWindow):
 
 
 
-    def get_latest_file(self, path):
-        """최신 파일 가져오기 및 프리뷰 실행 (FileManager 사용)"""
-        try:
-            if not os.path.exists(path):
-                latest_file = ""
-            else:
-                patterns = ["thumb", "_icon_", "_web_"]
-                all_items = [
-                    os.path.join(path, item)
-                    for item in os.listdir(path)
-                    if not any(pattern in item for pattern in patterns)
-                ]
-                if not all_items:
-                    latest_file = ""
-                else:
-                    latest_file = max(all_items, key=os.path.getmtime)
-        except Exception as e:
-            latest_file = ""
-        
-        if not latest_file:
-            QMessageBox.information(None, "알 림", "프리뷰가 존재하지 않습니다.")
-            return
-            
-        # 프리뷰 실행
-        import subprocess
-        
-        if os.path.isdir(latest_file):
-            subprocess.run(["xdg-open", str(latest_file)], check=True)
-        elif os.path.isfile(latest_file) and latest_file.lower().endswith((".mov", ".mp4", ".jpg", "jpeg", "png", "exr")):
-            cmd = ["/backstage/dcc/DCC", "rez-env", "rv-1.0.0", "--", "rv", latest_file]
-            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            stdout, stderr = process.communicate()
 
 
 
 
-    def backup_schedule(self, save_data, user, backup_dir, backup_name):
-        """스케쥴 데이터 백업"""
-        try:
-            from datetime import datetime
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_path = os.path.join(currentPath, ".backup", backup_dir)
-            backup_file = f"{backup_name}_{timestamp}.json"
 
-            if not os.path.exists(backup_path):
-                os.makedirs(backup_path, exist_ok=True)
 
-            success = self.export_Json(backup_path, backup_file, save_data)
 
-            if success:
-                self.cleanup_old_backups(backup_path, user, 10)
 
-            return success
 
-        except Exception as e:
-            print(f"스케쥴 백업 실패: {e}")
-            return False
-
-    def cleanup_old_backups(self, backup_dir, user, max_backups=10):
-        """오래된 백업 파일 정리"""
-        try:
-            if not os.path.exists(backup_dir):
-                return
-
-            backup_files = sorted(
-                [f for f in os.listdir(backup_dir) if f.startswith(user) and f.endswith('.json')],
-                key=lambda x: os.path.getmtime(os.path.join(backup_dir, x))
-            )
-
-            if len(backup_files) > max_backups:
-                files_to_delete = backup_files[:-max_backups]
-                for file_to_delete in files_to_delete:
-                    file_path = os.path.join(backup_dir, file_to_delete)
-                    os.remove(file_path)
-
-        except Exception as e:
-            print(f"백업 파일 정리 실패: {e}")
-
-    def import_Json(self, path, name):
-        """JSON 파일 가져오기"""
-        try:
-            json_file = os.path.join(path, name)
-            if os.path.exists(json_file):
-                with open(json_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-            return []
-        except Exception as e:
-            print(f"JSON 파일 임포트 실패 ({path}/{name}): {e}")
-            return []
-
-    def import_Json_Thread(self, path, name):
-        """쓰레드용 JSON 파일 가져오기"""
-        try:
-            json_file = os.path.join(path, name)
-            if os.path.exists(json_file):
-                with open(json_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-            return []
-        except Exception as e:
-            print(f"스레드 JSON 파일 임포트 실패 ({path}/{name}): {e}")
-            return []
-
-    def export_Json(self, path, name, data):
-        """JSON 파일 내보내기"""
-        try:
-            if not os.path.exists(path):
-                os.makedirs(path, exist_ok=True)
-
-            json_file = os.path.join(path, name)
-            with open(json_file, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-            return True
-        except Exception as e:
-            print(f"JSON 파일 익스포트 실패 ({path}/{name}): {e}")
-            return False
-
-    def export_Json_Thread(self, path, name, data):
-        """쓰레드용 JSON 파일 내보내기"""
-        try:
-            if not os.path.exists(path):
-                os.makedirs(path, exist_ok=True)
-
-            json_file = os.path.join(path, name)
-            with open(json_file, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-            return True
-        except Exception as e:
-            print(f"스레드 JSON 파일 익스포트 실패 ({path}/{name}): {e}")
-            return False
 
     def update_splitter_size(self):
         """UILayoutManager로 위임"""
@@ -781,7 +665,7 @@ class DxManager(QMainWindow):
 
         if os.path.exists(config.get_schedule_mirror_file(userID)):
 
-            savedMirrorData = self.import_Json_Thread(config.SCHEDULE_MIRROR_PATH, userID+"_scheduleMirror.json")
+            savedMirrorData = self.file_manager.import_Json_Thread(config.SCHEDULE_MIRROR_PATH, userID+"_scheduleMirror.json")
 
             del_sav_task = {} # 미러데이터를 만드는 경우 이미 미러데이터 제이슨 파일에 같은 이름의 데이타가 있으면 삭제 <-- 맨데이나 스테이터스등 수정된 최신데이타로 바꾸기 위해
             add_mir_task = {} # 삭제된 이전 미러 데이타를 대체하여 들어갈 최신 미러데이터 딕셔너리
@@ -813,7 +697,7 @@ class DxManager(QMainWindow):
                             savedMirrorData[proj].append(add_mir_task[proj][i])
 
 
-            self.export_Json_Thread(config.SCHEDULE_MIRROR_PATH, userID+"_scheduleMirror.json", savedMirrorData)
+            self.file_manager.export_Json_Thread(config.SCHEDULE_MIRROR_PATH, userID+"_scheduleMirror.json", savedMirrorData)
 
             # 미러데이타 백업
             backup_dir = "mirrorData"
@@ -821,12 +705,12 @@ class DxManager(QMainWindow):
 
 
         else:
-            self.export_Json_Thread(config.SCHEDULE_MIRROR_PATH, userID+"_scheduleMirror.json", mirror_Dic)            
+            self.file_manager.export_Json_Thread(config.SCHEDULE_MIRROR_PATH, userID+"_scheduleMirror.json", mirror_Dic)            
 
             # 미러데이타 백업
             backup_dir = "mirrorData"
             backup_name = userID +"_scheduleMirror"
-            self.backup_schedule(mirror_Dic, userID, backup_dir, backup_name)
+            self.file_manager.backup_schedule(mirror_Dic, userID, backup_dir, backup_name)
 
 
 
@@ -846,7 +730,7 @@ class DxManager(QMainWindow):
             name_kr, role, team, job, department = getUserInfo(member)
 
             if os.path.exists(config.get_user_info_file(member)):
-                memberUserInfo = self.import_Json(config.USER_INFO_PATH, member+"_userInfo.json")
+                memberUserInfo = self.file_manager.import_Json(config.USER_INFO_PATH, member+"_userInfo.json")
 
             if (memberUserInfo[0]["role"] != role) or (memberUserInfo[0]["team"] != team) or (memberUserInfo[0]["job"] != job) or (memberUserInfo[0]["department"] != department):
 
@@ -855,7 +739,7 @@ class DxManager(QMainWindow):
                 memberUserInfo[0]["job"] = job
                 memberUserInfo[0]["department"] = department
 
-                self.export_Json(config.USER_INFO_PATH, member+"_userInfo.json", memberUserInfo)                
+                self.file_manager.export_Json(config.USER_INFO_PATH, member+"_userInfo.json", memberUserInfo)                
 
         print (" - User information updated successfully - ")
 
@@ -933,7 +817,7 @@ class DxManager(QMainWindow):
         checkList_file_name = artist + "_" + context + "_data.json"
 
         # 태스크의 난이도 정보
-        checkList_data = self.import_Json(checkList_path, checkList_file_name) 
+        checkList_data = self.file_manager.import_Json(checkList_path, checkList_file_name) 
 
         if os.path.exists(os.path.join(checkList_path, checkList_file_name)):
             checked_list = {}
@@ -1004,12 +888,12 @@ class DxManager(QMainWindow):
     # 리더나 수퍼바이져 하위의 팀원을 모두 읽어와 리스트 반환
     def get_tree_member(self, member, teamMember):
 
-        member_info = self.import_Json(currentPath + "/.user_Info", member+"_userInfo.json")
+        member_info = self.file_manager.import_Json(currentPath + "/.user_Info", member+"_userInfo.json")
 
         if member_info[0]["role"] == "Lead" or member_info[0]["role"] == "Supervisor" or member_info[0]["role"] == "Manager":
 
             if (os.path.exists(currentPath + "/.team_Info/"+member+"_teamInfo.json")):
-                team_info = self.import_Json(currentPath + "/.team_Info", member+"_teamInfo.json")  
+                team_info = self.file_manager.import_Json(currentPath + "/.team_Info", member+"_teamInfo.json")  
 
                 for mem in team_info[0]:
                     self.get_tree_member(mem, teamMember)
@@ -1065,7 +949,7 @@ class DxManager(QMainWindow):
             self.get_tree_member(memberEN, teamMember)
 
             memberEN = [member for member in self.memberCache_ if self.memberCache_[member] == item][0]
-            member_info = self.import_Json(currentPath + "/.user_Info", memberEN+"_userInfo.json")
+            member_info = self.file_manager.import_Json(currentPath + "/.user_Info", memberEN+"_userInfo.json")
 
             if member_info[0]["role"] == "Lead" or member_info[0]["role"] == "Supervisor" or member_info[0]["role"] == "Manager":
                 if (os.path.exists(currentPath + "/.team_Info/"+memberEN+"_teamInfo.json")):
@@ -1374,7 +1258,7 @@ class DxManager(QMainWindow):
 
         edited_mandayData_path = os.path.join(config.CURRENT_PATH, ".temp_BDmanday", "edited_mandayData.json")
 
-        edited_Mandays_json = self.import_Json(os.path.join(config.CURRENT_PATH, ".temp_BDmanday"), "edited_mandayData.json")
+        edited_Mandays_json = self.file_manager.import_Json(os.path.join(config.CURRENT_PATH, ".temp_BDmanday"), "edited_mandayData.json")
 
 
         projectList_model = self.projListview.model()
@@ -1396,7 +1280,7 @@ class DxManager(QMainWindow):
 
         add_tasks = []
         if edited_Mandays_json == []:
-            self.export_Json(os.path.join(config.CURRENT_PATH, ".temp_BDmanday"), "edited_mandayData.json", saveItem)
+            self.file_manager.export_Json(os.path.join(config.CURRENT_PATH, ".temp_BDmanday"), "edited_mandayData.json", saveItem)
 
         elif edited_Mandays_json != []:
             for item in saveItem:                
@@ -1411,7 +1295,7 @@ class DxManager(QMainWindow):
                 if add_task not in edited_Mandays_json:
                     edited_Mandays_json.append(add_task)
 
-            self.export_Json(currentPath+"/.temp_BDmanday", "edited_mandayData.json", edited_Mandays_json)
+            self.file_manager.export_Json(currentPath+"/.temp_BDmanday", "edited_mandayData.json", edited_Mandays_json)
 
         self.reloadShotList() 
         self.refereshListViews(0, jsonData)           
@@ -1631,7 +1515,7 @@ class DxManager(QMainWindow):
 
         unscheduled_shots = [] # start/end date가 없는 샷들
         scheduleRange = []
-        taskInfoJson = self.import_Json(currentPath+"/.task_info", userID+"_task_info.json") # 현재 로드되어있는 태스크 정보 가져오기        
+        taskInfoJson = self.file_manager.import_Json(currentPath+"/.task_info", userID+"_task_info.json") # 현재 로드되어있는 태스크 정보 가져오기        
 
         for index in indexs:
             item = index.data()
@@ -1967,7 +1851,7 @@ class DxManager(QMainWindow):
         for member in self.memberCache_:
 
             thisQuarter, periodWorkload = self.get_workload_JsonData(member)
-            self.export_Json(currentPath+"/.quarterlyWorkload", member+"_workload.json", periodWorkload)
+            self.file_manager.export_Json(currentPath+"/.quarterlyWorkload", member+"_workload.json", periodWorkload)
 
 
 
@@ -1992,7 +1876,7 @@ class DxManager(QMainWindow):
         taskInfo = {}
         
         if taskInfoJson is None:
-            taskInfoJson = self.import_Json(currentPath+"/.task_info", userID+"_task_info.json")
+            taskInfoJson = self.file_manager.import_Json(currentPath+"/.task_info", userID+"_task_info.json")
         
         for member in members:
             if member in list(taskInfoJson.keys()):
@@ -2000,7 +1884,7 @@ class DxManager(QMainWindow):
             elif member not in list(taskInfoJson.keys()):
                 taskInfo[member] = self.getTaskInfo(member)
                 taskInfoJson[member] = taskInfo[member]
-                self.export_Json(currentPath+"/.task_info", userID+"_task_info.json", taskInfoJson)
+                self.file_manager.export_Json(currentPath+"/.task_info", userID+"_task_info.json", taskInfoJson)
         
         return taskInfo
 
@@ -2051,8 +1935,8 @@ class DxManager(QMainWindow):
                 itemNameEN.append(member)
 
         active_projects = list(self.projects.keys())
-        taskInfoJson = self.import_Json(currentPath+"/.task_info", userID+"_task_info.json") 
-        userInfoJson = self.import_Json(currentPath+"/.user_Info", itemNameEN[0]+"_userInfo.json") 
+        taskInfoJson = self.file_manager.import_Json(currentPath+"/.task_info", userID+"_task_info.json") 
+        userInfoJson = self.file_manager.import_Json(currentPath+"/.user_Info", itemNameEN[0]+"_userInfo.json") 
 
         thisQuarter, periodWorkload = self.get_workload_JsonData(itemNameEN[0])
 
@@ -2235,7 +2119,7 @@ class DxManager(QMainWindow):
         for member in orderList:
 
             # 현재사용자의 태스크정보 읽어오기
-            taskInfoJson = self.import_Json(currentPath+"/.task_info", userID+"_task_info.json")
+            taskInfoJson = self.file_manager.import_Json(currentPath+"/.task_info", userID+"_task_info.json")
 
             # 현재사용자의 태스크 정보가 없는경우 빈 리스트 항목만 만들어준다.
             if userID not in taskInfoJson:
@@ -2483,7 +2367,7 @@ class DxManager(QMainWindow):
             if self.memberCache_[member] == itemName:
                 itemNameEN = member
 
-        userInfoJson = self.import_Json(currentPath+"/.user_Info", itemNameEN+"_userInfo.json") 
+        userInfoJson = self.file_manager.import_Json(currentPath+"/.user_Info", itemNameEN+"_userInfo.json") 
 
         job = userInfoJson[0]["job"] + " : " + itemName
         team = userInfoJson[0]["team"]
@@ -2619,7 +2503,7 @@ class DxManager(QMainWindow):
 
         # 프로젝트가 종료되어 현재 프로젝트가 열려있지 않은경우
         elif proj not in self.projects:
-            saved_mirrData = self.import_Json(currentPath+"/.scheduleData_mirror", userID+"_scheduleMirror.json")
+            saved_mirrData = self.file_manager.import_Json(currentPath+"/.scheduleData_mirror", userID+"_scheduleMirror.json")
             for mirrTask in saved_mirrData[proj]:
                 if mirrTask[1] == task:
                     mandays = mirrTask[2]
@@ -3609,7 +3493,7 @@ class DxManager(QMainWindow):
             self.taskInfomationDialog.deleteLater()
             self.taskInfomationDialog = None
 
-        taskInfoJson = self.import_Json(currentPath+"/.task_info", userID+"_task_info.json")
+        taskInfoJson = self.file_manager.import_Json(currentPath+"/.task_info", userID+"_task_info.json")
         self.taskInfomationDialog = taskInfoDialog.TaskInfoDialog(self)
         self.taskInfomationDialog.setWindowTitle("Task Information")        
 
@@ -4392,7 +4276,7 @@ class DxManager(QMainWindow):
         listView_date = self.getCurrentListViewDate(0)
 
         # 현재 샷 리스트상에 로드된 샷들의 태스크정보 읽어오기
-        taskInfoJson = self.import_Json(currentPath+"/.task_info", userID+"_task_info.json")
+        taskInfoJson = self.file_manager.import_Json(currentPath+"/.task_info", userID+"_task_info.json")
 
         # 현재 체크된것과 상관없이 모든 팀원 리스트 읽어오기
         memberList = list(teamInfo[0].keys())
@@ -4638,7 +4522,7 @@ class DxManager(QMainWindow):
 
         checked_items_list_En = []
 
-        teamInfo = self.import_Json(currentPath+"/.team_Info", userID+"_teamInfo.json")
+        teamInfo = self.file_manager.import_Json(currentPath+"/.team_Info", userID+"_teamInfo.json")
 
         for mem in self.memberCache_:
             if self.memberCache_[mem] in checked_items_list_Kr:
@@ -4753,7 +4637,7 @@ class DxManager(QMainWindow):
         self.get_CheckedItems(rootItem, checked_items_list_Kr)
 
         checked_items_list_En = []
-        teamInfo = self.import_Json(currentPath+"/.team_Info", userID+"_teamInfo.json")
+        teamInfo = self.file_manager.import_Json(currentPath+"/.team_Info", userID+"_teamInfo.json")
 
         for mem in self.memberCache_:
             if self.memberCache_[mem] in checked_items_list_Kr:
@@ -5016,8 +4900,6 @@ class DxManager(QMainWindow):
 
     def getProjs_Mem(self, taskInfoJson, memEN, deselectAll=None, unchecked=None, teamMember=None) :
 
-        #print (self.currentProjs)
-
         # 팀 트리뷰에서 체크된 멤버 리스트 읽어오기
         invisibleRoot = self.teamTreeModel.invisibleRootItem()
         rootItem = invisibleRoot.child(0)
@@ -5038,6 +4920,8 @@ class DxManager(QMainWindow):
         date = lastWeek_monday
 
         projs_currentMem = []
+        projLong_list = []
+        current_all_Projects = []
 
         # 현재 멤버가 체크박스 on인경우 어싸인되어 있는 프로젝트들중 이번주 완료해야할 태스크가 있는 프로젝트들을 가져옴
         projs_currentMem = self.get_projs_thisWeek(taskInfoJson, checkedList_EN)
@@ -5067,7 +4951,7 @@ class DxManager(QMainWindow):
                     projs_currentMem.append(proj)
 
 
-            projLong_list = []
+            #projLong_list = []
             # 이번주를 포함한 지난주 다음주 3주간의 스케쥴이 어싸인되어있는 프로젝트를 찾아 task_3w 에 저장
             tasks_3w = []
             if jsonData != []:
@@ -5082,9 +4966,21 @@ class DxManager(QMainWindow):
                         if proj not in projs_currentMem:
                             projs_currentMem.append(proj)
 
+
+            current_all_Projects = list(dict.fromkeys(self.currentProjs + projs_currentMem ))
+
+            for proj in current_all_Projects:                    
+                if proj in self.projects:
+                    projLong_list.append(self.projects[proj][1])
+
+
+
+            """
             for proj in projs_currentMem:                    
                 if proj in self.projects:
                     projLong_list.append(self.projects[proj][1])
+            """
+
 
 
             # 뽑아낸 프로젝트 이름을 이용하여 UI상의 프로젝트 리스트뷰에서 해당 프로젝트를 선택
@@ -5102,9 +4998,12 @@ class DxManager(QMainWindow):
 
             # 샷리스트뷰 셋업이 끝난뒤 projLong_list 초기화
             projLong_list = []
-
+            self.currentProjs = current_all_Projects
 
         elif memEN not in taskInfoJson:
+
+            #current_all_Projects = self.currentProjs
+            #print (self.currentProjs)
 
             projLong_list = []
             currentProj_long_list = []
@@ -5112,7 +5011,6 @@ class DxManager(QMainWindow):
             # 현재  특정멤저의 체크박스를 해제한상태(taskInfoJson  에 memEN이 없는상태) 이므로 그외 남은  멤버의 프로젝트  선택된 상태
             for member in checkedList_EN:
                 projLong_list = self.get_projects_3Weeks(member, lastWeek_monday, nextWeek_friday, projs_currentMem)
-
 
             if projs_currentMem:
                 self.currentProjs = [proj for proj in self.currentProjs if proj in projs_currentMem]
@@ -5138,8 +5036,8 @@ class DxManager(QMainWindow):
                     elif text_proj != '관리개발 (testShot)' and text_proj not in projLong_list:# and text_proj in currentProj_long_list:
                         self.projSelection_model.select(index, QItemSelectionModel.Deselect)
 
-            # 샷리스트뷰 셋업이 끝난뒤 projLong_list 초기화
-            projLong_list = []
+        # 샷리스트뷰 셋업이 끝난뒤 projLong_list 초기화
+        projLong_list = []
 
 
 
@@ -5193,7 +5091,7 @@ class DxManager(QMainWindow):
     # 트리뷰의 멤버를 선택하면 프로젝트 리스트에 어싸인된 프로젝트들 자동으로 선택되게 하기
     def sel_assigned_proj(self, set="multi", index=None, items=None, teamMember=None, deselectAll=None):
 
-        taskInfoJson = self.import_Json(currentPath+"/.task_info", userID+"_task_info.json")
+        taskInfoJson = self.file_manager.import_Json(currentPath+"/.task_info", userID+"_task_info.json")
 
         checkedItems = []
         if index != None and set=="single" and items > 1:
@@ -5312,7 +5210,7 @@ class DxManager(QMainWindow):
                 parent_widget.setStyleSheet("")
 
         if listview_Model.rowCount() != 0:
-            taskInfoJson = self.import_Json(currentPath+"/.task_info", userID+"_task_info.json")
+            taskInfoJson = self.file_manager.import_Json(currentPath+"/.task_info", userID+"_task_info.json")
 
             for row in range(listview_Model.rowCount(QModelIndex())):
                 index = listview_Model.index(row)
@@ -5365,7 +5263,7 @@ class DxManager(QMainWindow):
         task_manday_status_list = []
         mirror_proj_task_dic = {}
 
-        bidEdit_json = self.import_Json(currentPath+"/.temp_BDmanday", "edited_mandayData.json")
+        bidEdit_json = self.file_manager.import_Json(currentPath+"/.temp_BDmanday", "edited_mandayData.json")
 
         for proj in allProj:
             member_shot = {}
@@ -5373,7 +5271,7 @@ class DxManager(QMainWindow):
 
             for member in members:
 
-                taskInfoJson = self.import_Json_Thread(currentPath+"/.task_info", userID+"_task_info.json")
+                taskInfoJson = self.file_manager.import_Json_Thread(currentPath+"/.task_info", userID+"_task_info.json")
 
                 if member in list(taskInfoJson.keys()):
                     taskInfo[member] = taskInfoJson[member]
@@ -5381,7 +5279,7 @@ class DxManager(QMainWindow):
                 elif member not in list(taskInfoJson.keys()):
                     taskInfo[member] = self.getTaskInfo(member)
                     taskInfoJson[member] = taskInfo[member]
-                    self.export_Json(currentPath+"/.task_info", userID+"_task_info.json", taskInfoJson)
+                    self.file_manager.export_Json(currentPath+"/.task_info", userID+"_task_info.json", taskInfoJson)
 
 
                 process = ""
@@ -5464,7 +5362,7 @@ class DxManager(QMainWindow):
 
     def convert_to_tuple(self, tasks, members):
 
-        mirrorData = self.import_Json(currentPath+"/.scheduleData_mirror", userID+"_scheduleMirror.json")
+        mirrorData = self.file_manager.import_Json(currentPath+"/.scheduleData_mirror", userID+"_scheduleMirror.json")
         selectedProj = self.get_selected_projects()
 
         taskInfo = {}
@@ -5477,7 +5375,7 @@ class DxManager(QMainWindow):
         task_manday_status_list__ = []
 
         userTaskInfo_path = currentPath+"/.task_info/" + userID +"_task_info.json"
-        taskInfoJson = self.import_Json(currentPath+"/.task_info", userID+"_task_info.json")
+        taskInfoJson = self.file_manager.import_Json(currentPath+"/.task_info", userID+"_task_info.json")
 
 
         for sel_proj in selectedProj:
@@ -5593,10 +5491,10 @@ class DxManager(QMainWindow):
 
         # 현재사용자의 한글이름을 가져오기 위해 유저정보에 가져오기
         userInfoJsonPath = path + "/.user_Info"
-        userInfo = self.import_Json(userInfoJsonPath, userID+"_userInfo.json")
+        userInfo = self.file_manager.import_Json(userInfoJsonPath, userID+"_userInfo.json")
 
         taskJsonPath = path + "/.task_info"
-        self.export_Json(taskJsonPath, userID+"_task_info.json", taskInfo)
+        self.file_manager.export_Json(taskJsonPath, userID+"_task_info.json", taskInfo)
 
         # 초기 스케쥴 데이타 생성
         existingData = jsonData
@@ -5795,7 +5693,7 @@ class DxManager(QMainWindow):
             self.reloadShotList()
             items = len(checked_items_list)
             self.sel_assigned_proj("single", index, items)
-            #self.refereshListViews(0, jsonData)            
+            self.refereshListViews(0, jsonData)            
 
 
     # 제이슨으로 저장된 리더의 팀멤버가 있다면 정보를 읽어옴
@@ -6112,7 +6010,7 @@ class DxManager(QMainWindow):
         userInfoPath = currentPath+"/.user_Info"
         userInfo_json = os.path.join(userInfoPath, user+"_userInfo.json")
 
-        userInfoData = self.import_Json(userInfoPath, user+"_userInfo.json")
+        userInfoData = self.file_manager.import_Json(userInfoPath, user+"_userInfo.json")
 
         if userInfoData:
             name_kr = userInfoData[0]["name_kr"]
@@ -6451,7 +6349,7 @@ class DxManager(QMainWindow):
 
         shotList_model = self.shotListview.model()
         if shotList_model.rowCount() != 0:
-            taskInfoJson = self.import_Json(currentPath+"/.task_info", userID+"_task_info.json")
+            taskInfoJson = self.file_manager.import_Json(currentPath+"/.task_info", userID+"_task_info.json")
 
             today = QDate.currentDate()
             monday = today.addDays(-today.dayOfWeek()+1)
@@ -6552,7 +6450,7 @@ class DxManager(QMainWindow):
                 elif member not in list(self.taskInfoJson.keys()): 
                     taskInfo[member] = self.getTaskInfo(member)
                     self.taskInfoJson[member] = taskInfo[member]
-                    self.export_Json(currentPath+"/.task_info", userID+"_task_info.json", self.taskInfoJson)
+                    self.file_manager.export_Json(currentPath+"/.task_info", userID+"_task_info.json", self.taskInfoJson)
 
 
                 progressRate = 0
@@ -6631,7 +6529,7 @@ class DxManager(QMainWindow):
         all_shots = self.convert_mandayEditList(all_shots)
 
         # taskInfo에는 현재 선택되어진 멤버의 태스크정보들만 들어있으므로 이 정보로 기존 정보(체크가 해제된 멤버의 태스크정보까지 포함된)를 덮어씀
-        self.export_Json(currentPath+"/.task_info", userID+"_task_info.json", taskInfo)
+        self.file_manager.export_Json(currentPath+"/.task_info", userID+"_task_info.json", taskInfo)
 
         return all_shots  
 
@@ -6650,11 +6548,11 @@ class DxManager(QMainWindow):
         global connect_shot_schedule
 
         tempBid_path = currentPath + "/.temp_BDmanday"
-        editedTasks_json = self.import_Json(tempBid_path, "edited_mandayData.json")
+        editedTasks_json = self.file_manager.import_Json(tempBid_path, "edited_mandayData.json")
 
         selectedProj = self.get_selected_projects()
 
-        taskInfoJson = self.import_Json(currentPath+"/.task_info", userID+"_task_info.json")
+        taskInfoJson = self.file_manager.import_Json(currentPath+"/.task_info", userID+"_task_info.json")
 
         # 프로젝트 자동선택이 on 일경우 선택된 팀원의 task정보 읽어오기
         taskInfo = {}
@@ -6668,13 +6566,13 @@ class DxManager(QMainWindow):
                     elif member not in list(self.taskInfoJson.keys()): 
                         taskInfo[member] = self.getTaskInfo(member)
                         self.taskInfoJson[member] = taskInfo[member]
-                        self.export_Json(currentPath+"/.task_info", userID+"_task_info.json", self.taskInfoJson)
+                        self.file_manager.export_Json(currentPath+"/.task_info", userID+"_task_info.json", self.taskInfoJson)
 
 
                 elif self.reload_tatic == 1:
                         taskInfo[member] = self.getTaskInfo(member)
                         self.taskInfoJson[member] = taskInfo[member]
-                        self.export_Json(currentPath+"/.task_info", userID+"_task_info.json", self.taskInfoJson)
+                        self.file_manager.export_Json(currentPath+"/.task_info", userID+"_task_info.json", self.taskInfoJson)
 
 
         proj_member_shots={}
@@ -6695,12 +6593,12 @@ class DxManager(QMainWindow):
                     elif member not in list(self.taskInfoJson.keys()): 
                         taskInfo[member] = self.getTaskInfo(member)
                         self.taskInfoJson[member] = taskInfo[member]
-                        self.export_Json(currentPath+"/.task_info", userID+"_task_info.json", self.taskInfoJson)
+                        self.file_manager.export_Json(currentPath+"/.task_info", userID+"_task_info.json", self.taskInfoJson)
 
                 elif self.reload_tatic == 1:
                         taskInfo[member] = self.getTaskInfo(member)
                         self.taskInfoJson[member] = taskInfo[member]
-                        self.export_Json(currentPath+"/.task_info", userID+"_task_info.json", self.taskInfoJson)
+                        self.file_manager.export_Json(currentPath+"/.task_info", userID+"_task_info.json", self.taskInfoJson)
 
 
                 progressRate = 0
@@ -6863,7 +6761,7 @@ class DxManager(QMainWindow):
 
 
         # taskInfo에는 현재 선택되어진 멤버의 태스크정보들만 들어있으므로 이 정보로 기존 정보(체크가 해제된 멤버의 태스크정보까지 포함된)를 덮어씀
-        self.export_Json(currentPath+"/.task_info", userID+"_task_info.json", taskInfo)
+        self.file_manager.export_Json(currentPath+"/.task_info", userID+"_task_info.json", taskInfo)
 
         return all_shotDic
 
@@ -6937,7 +6835,7 @@ class DxManager(QMainWindow):
             self.MT_reloadShotList = 0
             self.MT_selAll_thread = 0
 
-        self.export_Json(currentPath+"/.task_info", userID+"_task_info.json", self.taskInfo)
+        self.file_manager.export_Json(currentPath+"/.task_info", userID+"_task_info.json", self.taskInfo)
         self.sel_assigned_proj()
         self.refereshListViews(0, jsonData)
 
@@ -6951,7 +6849,7 @@ class DxManager(QMainWindow):
         QApplication.setOverrideCursor(Qt.WaitCursor)
 
         tempBid_path = currentPath + "/.temp_BDmanday"
-        editedTasks_json = self.import_Json(tempBid_path, "edited_mandayData.json")
+        editedTasks_json = self.file_manager.import_Json(tempBid_path, "edited_mandayData.json")
         selectedProj = self.get_selected_projects()
 
         taskInfo = {}
@@ -7005,7 +6903,7 @@ class DxManager(QMainWindow):
         self.thread_finished = False
 
         tempBid_path = currentPath + "/.temp_BDmanday"
-        editedTasks_json = self.import_Json(tempBid_path, "edited_mandayData.json")
+        editedTasks_json = self.file_manager.import_Json(tempBid_path, "edited_mandayData.json")
 
         selectedProj = self.get_selected_projects()
 
@@ -7035,7 +6933,7 @@ class DxManager(QMainWindow):
     def convert_mandayEditList(self, shotList):
 
         global connect_shot_proj
-        bidEdit_json = self.import_Json(currentPath+"/.temp_BDmanday", "edited_mandayData.json")
+        bidEdit_json = self.file_manager.import_Json(currentPath+"/.temp_BDmanday", "edited_mandayData.json")
 
         edited_taskList = {}
         del_tasks = []
