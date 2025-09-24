@@ -22,28 +22,28 @@ class SortManager:
         self.main_window.sort_column = 1
         self.main_window.sort_order = Qt.DescendingOrder if self.main_window.sort_order == Qt.AscendingOrder else Qt.AscendingOrder
         self.sortShotlistview()
-        self.main_window.temp_listview_manager.set_listView_view(self.main_window.shotListview, self.main_window.shotListview.model())
+        self.main_window.ui_controller.set_listView_view(self.main_window.shotListview, self.main_window.shotListview.model())
 
     def sort_by_status(self):
         """shotListView의 상태명 정렬"""
         self.main_window.sort_column = 3
         self.main_window.sort_order = Qt.DescendingOrder if self.main_window.sort_order == Qt.AscendingOrder else Qt.AscendingOrder
         self.sortShotlistview()
-        self.main_window.temp_listview_manager.set_listView_view(self.main_window.shotListview, self.main_window.shotListview.model())
+        self.main_window.ui_controller.set_listView_view(self.main_window.shotListview, self.main_window.shotListview.model())
 
     def sort_by_part(self):
         """shotListView의 파트명 정렬"""
         self.main_window.sort_column = 4
         self.main_window.sort_order = Qt.DescendingOrder if self.main_window.sort_order == Qt.AscendingOrder else Qt.AscendingOrder
         self.sortShotlistview()
-        self.main_window.temp_listview_manager.set_listView_view(self.main_window.shotListview, self.main_window.shotListview.model())
+        self.main_window.ui_controller.set_listView_view(self.main_window.shotListview, self.main_window.shotListview.model())
 
     def sort_by_proj(self):
         """shotListView의 프로젝트명 정렬"""
         self.main_window.sort_column = 0
         self.main_window.sort_order = Qt.DescendingOrder if self.main_window.sort_order == Qt.AscendingOrder else Qt.AscendingOrder
         self.sortShotlistview()
-        self.main_window.temp_listview_manager.set_listView_view(self.main_window.shotListview, self.main_window.shotListview.model())
+        self.main_window.ui_controller.set_listView_view(self.main_window.shotListview, self.main_window.shotListview.model())
 
     def sortShotlistview(self):
         """샷 리스트뷰 정렬 실행"""
@@ -124,4 +124,4 @@ class SortManager:
             source_model.setSortOrder(sortOrder)
             source_model.sort(sortColumn, sortOrder)
             self.main_window.set_itemBackgroundColor(source_model, date)
-            self.main_window.temp_listview_manager.set_listView_view(listview, source_model)
+            self.main_window.ui_controller.set_listView_view(listview, source_model)
