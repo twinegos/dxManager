@@ -219,10 +219,76 @@ class TempListViewManager:
 - **데이터 전달 불일치**: 글로벌 변수와 지역 변수 간 참조 차이
 - **이벤트 연결 문제**: Qt 시그널/슬롯 연결이 분리된 클래스를 제대로 참조하지 못함
 
+## ListView 메서드 추가 분리 작업 완료 (2025-09-24)
+
+### ✅ 최종 완료 상황 (2025-09-24)
+#### 완료된 TempListViewManager 메서드 분리 (12개)
+1. **setListviewLineEdit** - 슬라이더 홀수 값 표시
+2. **getCurrentListViewDate** - ListView 날짜 정보 반환
+3. **set_listView_view** - ListView 뷰 설정 및 필터링
+4. **getListView_selectedItem** - 선택된 아이템 조회
+5. **getListViewItem** - 모든 아이템 조회
+6. **getListViewItem_inJson** - JSON 기반 아이템 조회
+7. **makeListView** - ListView 위젯 생성
+8. **addListView** - ListView 추가 (복잡한 메서드)
+9. **setUp_listViewUI** - 초기 ListView UI 설정
+10. **changeListViewUI_notTracking** - 슬라이더 릴리즈 시 UI 변경
+11. **✅ removeListView** - ListView 제거 (새로 추가)
+12. **✅ changeListViewUI_** - LineEdit 텍스트 변경 시 UI 변경 (새로 추가)
+
+#### 현재 TempListViewManager 클래스 상태 (131-653라인)
+- **위치**: dxManager.py의 131-653라인
+- **초기화**: `self.temp_listview_manager = TempListViewManager(self)` (624라인)
+- **시그널 연결**: 슬라이더 이벤트가 temp_listview_manager로 연결됨
+- **위임 메서드**: 17개 위치에서 temp_listview_manager 호출
+
+### 🚨 발견된 문제점 (2025-09-24)
+
+#### addListView 메서드 작동 불가 문제
+**증상**: 슬라이더를 움직여도 ListView가 추가되지 않음
+
+**시도한 해결책들**:
+1. **scheduleListview import 경로 수정** - 실패
+   - `sys.path.append('./class')` 추가 시도
+   - 원위치 복구함
+
+**추정 원인**:
+1. **메서드 호출 체인 문제**: `changeListViewUI_notTracking` → `addListView` 호출 경로
+2. **파라미터 전달 문제**: `self.main_window.activeJsonData` 값 이슈
+3. **예외 발생**: addListView 내부 예외로 인한 중단
+4. **Qt 이벤트 처리**: 분리된 클래스에서 Qt 위젯 생성/관리 문제
+
+**현재 호출 구조**:
+```python
+# 슬라이더 릴리즈 →
+self.temp_listview_manager.changeListViewUI_notTracking() →
+# TempListViewManager 내부에서
+self.addListView(number_add, current_Listview_Num, scaleUI, self.main_window.activeJsonData)
+```
+
+### 다음 작업 계획 (미완료)
+
+#### 1단계: addListView 문제 해결 (긴급)
+- **디버깅 방법**:
+  1. addListView 메서드 내부에 print 문 추가하여 실행 여부 확인
+  2. 파라미터 값들 출력해서 올바른 값 전달되는지 확인
+  3. scheduleListview 모듈 import 성공 여부 확인
+  4. try-except로 예외 잡아서 오류 메시지 확인
+
+#### 2단계: TempListViewManager를 UIController로 통합
+- 모든 메서드가 정상 작동 확인 후 진행
+- `/class/ui_controller.py`로 메서드들 이동
+- 임시 클래스 제거
+
+#### 3단계: 다음 클래스 분리 계획
+- **ProjectManager** 분리 (8개 메서드) - 중간 위험성
+- **ScheduleManager** 분리 (9개 메서드) - 높은 위험성
+
 ### Git 상태
 - **현재 브랜치**: main
-- **마지막 작업**: ListView 메서드 10개 분리 및 슬라이더 문제 해결 완료
-- **다음 작업**: 사용자 추가 디버깅 후 최종 통합
+- **라인수**: dxManager.py 7,048라인
+- **마지막 작업**: TempListViewManager 12개 메서드 분리 완료, addListView 작동 문제 발생
+- **다음 작업**: addListView 문제 해결 후 UIController 통합
 
 ### 성공 요인 분석 (FileManager 재분리)
 1. **단계적 접근**: 한번에 모든 메서드를 분리하지 않고 그룹별로 진행

@@ -323,10 +323,9 @@ class TempListViewManager:
 
         return listView_day, listViewLayout
 
-    def addListView(self, num, currentNum, scaleUI):
+    def addListView(self, num, currentNum, scaleUI, active_jsonDate):
         """ListView 추가"""
-        # Import global jsonData
-        from dxManager import jsonData
+
         import scheduleListview as lv
 
         half_val = int(num/2) # 추가되는 리스트뷰중 앞쪽 혹은 뒤쪽에 붙일 리스트뷰의 개수(전체추가되는 개수의 절반)
@@ -418,17 +417,15 @@ class TempListViewManager:
                 listView = frameLayout.itemAt(0).widget()
                 self.main_window.manager.Move_sideway_setContainer(frame, layout)
 
-        # 글로벌 jsonData를 메인 윈도우에서 가져와서 사용
-        from dxManager import jsonData as global_jsonData
-        self.main_window.refereshListViews(0, global_jsonData)
+
+        self.main_window.refereshListViews(0, active_jsonDate)
         self.main_window.ui_layout_manager.update_splitter_size() # 생성된 리스트뷰들의 갯수의 합보다 scroll area 의 크기를 더크게 셋팅하여 splitter 작동되도록 함
         self.main_window.ui_layout_manager.reset_splitter_size() # 스케쥴 리스트뷰의 스플리터 사이즈 리셋
 
-    def setUp_listViewUI(self):
+    def setUp_listViewUI(self, init_jsonData):
         """초기 ListView UI 설정"""
         import scheduleListview as lv
         import pandas as pd
-        from dxManager import jsonData
 
         numberListView = int(self.main_window.listViewNumLineEdit.text())
         today = QDate.currentDate()
@@ -496,8 +493,8 @@ class TempListViewManager:
 
         date = lastWeek_monday
 
-        if jsonData != []:
-            json_df = pd.DataFrame(jsonData) # jsonData 파일을 판다스 데이타프레임으로 변환
+        if init_jsonData != []:
+            json_df = pd.DataFrame(init_jsonData) # init_jsonData 파일을 판다스 데이타프레임으로 변환
             artist_df = json_df.set_index('artist') # artist 열을 인덱스로 가지는 데이타프레임으로 변환
             user_df = artist_df.loc[artist_df.index == userID] # 아티스트 데이타프레임에서 현재 사용자의 데이타만 뽑은 데이타프레임으로 변환
 
@@ -522,7 +519,7 @@ class TempListViewManager:
             recentWork_df = user_df[mask2.isin(commonValues)] # 일치하는 날짜에 해당하는 스케쥴어싸인 데이타프레임
             userTasks = recentWork_df['tasks'] # task컬럼만 시리즈로 추출
 
-            # jsonData 안의 현재 유저의 스케쥴 데이타들중 task부분만 추출하여 set연산자를 통해 현재 진행중인 프로젝트 이름만 추출
+            # init_jsonData 안의 현재 유저의 스케쥴 데이타들중 task부분만 추출하여 set연산자를 통해 현재 진행중인 프로젝트 이름만 추출
             projects = set()
             for task in userTasks: # 시리즈안의 프로젝트만 set 연산자를 통해 뽑아냄
                 proj = set(task[0])
@@ -583,12 +580,74 @@ class TempListViewManager:
             fontScale = 25
 
         if number_add > 0:
-            self.addListView(number_add, current_Listview_Num, scaleUI)
+            self.addListView(number_add, current_Listview_Num, scaleUI, self.main_window.activeJsonData)
         elif number_add < 0:
-            self.main_window.removeListView(number_add, current_Listview_Num)
+            self.removeListView(number_add, current_Listview_Num)
 
         mm = self.main_window.listViewScroll.horizontalScrollBar().maximum()
         self.main_window.listViewScroll.horizontalScrollBar().setValue(mm)
+
+    def removeListView(self, removeNum, currentNum):
+        """ListView 제거"""
+        half_val = abs(int(removeNum/2)) # 추가되는 리스트뷰중 앞쪽 혹은 뒤쪽에 삭제할 리스트뷰의 개수(전체삭제되는 개수의 절반)
+        half_existList = int(currentNum / 2) # 이미 존재하는 리스트뷰 개수기준으로 현재날짜기준 앞쪽 혹은 뒤쪽의 리스트뷰개수(전체개수의 절반)
+
+        widgets_to_remove = []
+        for i in range(abs(removeNum)):
+            if  i < half_val:
+                widgets_to_remove.append(self.main_window.dayUi.splitter.widget(i))
+
+            if i >= half_val:
+                numLayout = self.main_window.dayUi.splitter.count()
+                widgets_to_remove.append(self.main_window.dayUi.splitter.widget((numLayout-1)-(i-half_val)))
+
+        if widgets_to_remove:
+
+            widgets_to_check = widgets_to_remove[:]
+            for widget in widgets_to_remove:
+                self.main_window._remove_layout(widget)
+
+            QApplication.processEvents() # 삭제 이벤트 처리
+            widgets_to_remove.clear() # 참조 제거
+
+        newRangeEndDate = QDate(self.main_window.rangeEndDate.year(), self.main_window.rangeEndDate.month(), self.main_window.rangeEndDate.day()).addDays(-1*half_val)
+        newRangeStartDate = QDate(newRangeEndDate.year(), newRangeEndDate.month(), newRangeEndDate.day()).addDays(-1*(removeNum+currentNum)+1)
+
+        self.main_window.update_range_Label(newRangeStartDate, newRangeEndDate)
+        self.main_window.rangeEndDate = newRangeEndDate
+
+        self.main_window.ui_layout_manager.reset_splitter_size() # 스케쥴 리스트뷰의 스플리터 사이즈 리셋
+
+    def changeListViewUI_(self, text):
+        """LineEdit 텍스트 변경 시 ListView UI 변경"""
+        self.main_window.listViewSlider.setValue(int(text))
+
+        scaleUI = 300/(int(self.main_window.listViewNumLineEdit.text())/3)
+
+        current_Listview_Num = self.main_window.dayUi.splitter.count()
+
+        changed_ListView_Num = int(self.main_window.listViewNumLineEdit.text())
+        number_add = changed_ListView_Num - current_Listview_Num
+
+        if 300 < scaleUI < 800:
+            fontScale = 12
+
+        elif scaleUI <= 300:
+            scaleUI = 300 # 리스트뷰의 최소크기
+            fontScale = 12
+
+        elif scaleUI >= 800:
+            fontScale = 25
+
+
+        if number_add > 0:
+            self.addListView(number_add, current_Listview_Num, scaleUI, self.main_window.activeJsonData)
+
+        elif number_add < 0:
+            self.removeListView(number_add, current_Listview_Num)
+
+        max_scroll = self.main_window.listViewScroll.horizontalScrollBar().maximum()
+        self.main_window.listViewScroll.horizontalScrollBar().setValue(max_scroll)
 
 
 
@@ -832,7 +891,6 @@ class DxManager(QMainWindow):
         # self.db_manager = DatabaseManager()
         # self.db_manager.connect()
 
-
         # 컨트롤러 속성 연결
  
         self.saveButton.clicked.connect(self.saveFile)        
@@ -877,7 +935,7 @@ class DxManager(QMainWindow):
         self.listViewSlider.sliderReleased.connect(self.temp_listview_manager.changeListViewUI_notTracking)
 
         # 초기 기본 5개의 리스트뷰 생성
-        self.temp_listview_manager.setUp_listViewUI()
+        self.temp_listview_manager.setUp_listViewUI(jsonData)
 
         # 각 날짜의 데이타가 아직 생성되지 않은 초기상태에서 초기 json 파일 생성
         if not jsonData:
@@ -937,6 +995,8 @@ class DxManager(QMainWindow):
         self.teamTree.installEventFilter(self)
 
         self.teamLeader.setCheckState(Qt.Checked)
+
+
 
 
 
@@ -3363,35 +3423,8 @@ class DxManager(QMainWindow):
 
     @Slot()
     def changeListViewUI_(self, text):
-
-        self.listViewSlider.setValue(int(text))  
-
-        scaleUI = 300/(int(self.listViewNumLineEdit.text())/3) 
-
-        current_Listview_Num = self.dayUi.splitter.count()
-
-        changed_ListView_Num = int(self.listViewNumLineEdit.text())
-        number_add = changed_ListView_Num - current_Listview_Num
-
-        if 300 < scaleUI < 800:
-            fontScale = 12
-
-        elif scaleUI <= 300:
-            scaleUI = 300 # 리스트뷰의 최소크기
-            fontScale = 12
-            
-        elif scaleUI >= 800:
-            fontScale = 25
-
-
-        if number_add > 0:
-            self.addListView(number_add, current_Listview_Num, scaleUI)
-
-        elif number_add < 0:
-            self.removeListView(number_add, current_Listview_Num)         
-
-        max_scroll = self.listViewScroll.horizontalScrollBar().maximum()
-        self.listViewScroll.horizontalScrollBar().setValue(max_scroll)#self.listViewScroll.horizontalScrollBar().maximum())
+        """LineEdit 텍스트 변경 시 ListView UI 변경 - 임시 클래스로 위임"""
+        return self.temp_listview_manager.changeListViewUI_(text)
 
           
 
@@ -3402,7 +3435,9 @@ class DxManager(QMainWindow):
 
     def addListView(self, num, currentNum, scaleUI):
         """ListView 추가 - 임시 클래스로 위임"""
-        return self.temp_listview_manager.addListView(num, currentNum, scaleUI)
+
+        activeJsonData = jsonData
+        return self.temp_listview_manager.addListView(num, currentNum, scaleUI, activeJsonData)
 
 
 
@@ -3440,37 +3475,8 @@ class DxManager(QMainWindow):
 
 
     def removeListView(self, removeNum, currentNum):
-
-        global jsonData
-
-        half_val = abs(int(removeNum/2)) # 추가되는 리스트뷰중 앞쪽 혹은 뒤쪽에 삭제할 리스트뷰의 개수(전체삭제되는 개수의 절반)
-        half_existList = int(currentNum / 2) # 이미 존재하는 리스트뷰 개수기준으로 현재날짜기준 앞쪽 혹은 뒤쪽의 리스트뷰개수(전체개수의 절반)
-
-        widgets_to_remove = []
-        for i in range(abs(removeNum)):
-            if  i < half_val:
-                widgets_to_remove.append(self.dayUi.splitter.widget(i))
-
-            if i >= half_val:
-                numLayout = self.dayUi.splitter.count()  
-                widgets_to_remove.append(self.dayUi.splitter.widget((numLayout-1)-(i-half_val)))
-
-        if widgets_to_remove:
-
-            widgets_to_check = widgets_to_remove[:]
-            for widget in widgets_to_remove:
-                self._remove_layout(widget)
-
-            QApplication.processEvents() # 삭제 이벤트 처리
-            widgets_to_remove.clear() # 참조 제거
-
-        newRangeEndDate = QDate(self.rangeEndDate.year(), self.rangeEndDate.month(), self.rangeEndDate.day()).addDays(-1*half_val)
-        newRangeStartDate = QDate(newRangeEndDate.year(), newRangeEndDate.month(), newRangeEndDate.day()).addDays(-1*(removeNum+currentNum)+1)
-       
-        self.update_range_Label(newRangeStartDate, newRangeEndDate)
-        self.rangeEndDate = newRangeEndDate
-
-        self.ui_layout_manager.reset_splitter_size() # 스케쥴 리스트뷰의 스플리터 사이즈 리셋
+        """ListView 제거 - 임시 클래스로 위임"""
+        return self.temp_listview_manager.removeListView(removeNum, currentNum)
 
 
 
@@ -3975,7 +3981,7 @@ class DxManager(QMainWindow):
     # 초기 스케쥴 리스트뷰 UI생성
     def setUp_listViewUI(self):
         """초기 ListView UI 설정 - 임시 클래스로 위임"""
-        return self.temp_listview_manager.setUp_listViewUI()
+        return self.temp_listview_manager.setUp_listViewUI(jsonData)
 
 
 
