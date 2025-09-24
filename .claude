@@ -284,11 +284,38 @@ self.addListView(number_add, current_Listview_Num, scaleUI, self.main_window.act
 - **ProjectManager** 분리 (8개 메서드) - 중간 위험성
 - **ScheduleManager** 분리 (9개 메서드) - 높은 위험성
 
+### ✅ TempListViewManager 위임 메서드 직접 호출 변경 완료 (2025-09-24)
+
+#### 완료된 작업
+1. **위임 메서드 제거**: DxManager 클래스 내 11개 위임 메서드 완전 제거
+   - `setListviewLineEdit`, `changeListViewUI_notTracking`, `changeListViewUI_`, `removeListView`, `setUp_listViewUI`, `makeListView`, `getListViewItem_inJson`, `getListViewItem`, `getListView_selectedItem`, `getCurrentListViewDate`, `set_listView_view` 제거
+   - **예외**: `addListView`만 `activeJsonData = jsonData` 버그 수정 로직 유지 위해 위임 메서드 형태 보존
+
+2. **직접 호출 변경**: 모든 호출을 `self.temp_listview_manager.메서드명()` 직접 호출로 변경
+   - DxManager 클래스 내부: 17개 호출 위치 수정
+   - 외부 클래스: sort_manager.py의 5개 호출 수정
+   - 누락 발견 및 수정: getListViewItem 2개 추가 수정, 주석 처리된 호출 2개 수정
+
+3. **버그 수정 로직 보존**:
+   - addListView 메서드의 `activeJsonData = jsonData` 전달 로직 완벽 유지
+   - 이전에 해결된 ListView 추가 기능 정상 작동 확인
+
+#### 작업 방법론
+- **점진적 수정**: 위임 메서드 제거 → 직접 호출 수정 → 외부 클래스 수정 → 누락 추가 수정
+- **철저한 검증**: 전체 파일 대상 패턴 검색으로 모든 호출 확인
+- **문법 검사**: Python 컴파일 테스트 통과
+
+#### 외부 테스트 결과
+- **팀원 체크박스 토글**: 정상 작동
+- **슬라이더 ListView 조작**: 정상 작동
+- **addListView 기능**: 정상 작동
+- **모든 핵심 기능**: 이상 없음
+
 ### Git 상태
 - **현재 브랜치**: main
-- **라인수**: dxManager.py 7,048라인
-- **마지막 작업**: TempListViewManager 12개 메서드 분리 완료, addListView 작동 문제 발생
-- **다음 작업**: addListView 문제 해결 후 UIController 통합
+- **라인수**: dxManager.py 약 7,020라인 (위임 메서드 제거로 감소)
+- **마지막 작업**: TempListViewManager 위임 메서드 직접 호출 변경 완료
+- **다음 작업**: TempListViewManager → UIController 통합 또는 다음 클래스 분리 진행
 
 ### 성공 요인 분석 (FileManager 재분리)
 1. **단계적 접근**: 한번에 모든 메서드를 분리하지 않고 그룹별로 진행

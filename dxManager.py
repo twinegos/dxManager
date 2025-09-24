@@ -325,7 +325,8 @@ class TempListViewManager:
 
     def addListView(self, num, currentNum, scaleUI, active_jsonDate):
         """ListView 추가"""
-
+        import sys
+        sys.path.append('./class')
         import scheduleListview as lv
 
         half_val = int(num/2) # 추가되는 리스트뷰중 앞쪽 혹은 뒤쪽에 붙일 리스트뷰의 개수(전체추가되는 개수의 절반)
@@ -424,6 +425,8 @@ class TempListViewManager:
 
     def setUp_listViewUI(self, init_jsonData):
         """초기 ListView UI 설정"""
+        import sys
+        sys.path.append('./class')
         import scheduleListview as lv
         import pandas as pd
 
@@ -580,7 +583,7 @@ class TempListViewManager:
             fontScale = 25
 
         if number_add > 0:
-            self.addListView(number_add, current_Listview_Num, scaleUI, self.main_window.activeJsonData)
+            self.main_window.addListView(number_add, current_Listview_Num, scaleUI)
         elif number_add < 0:
             self.removeListView(number_add, current_Listview_Num)
 
@@ -641,7 +644,7 @@ class TempListViewManager:
 
 
         if number_add > 0:
-            self.addListView(number_add, current_Listview_Num, scaleUI, self.main_window.activeJsonData)
+            self.main_window.addListView(number_add, current_Listview_Num, scaleUI)
 
         elif number_add < 0:
             self.removeListView(number_add, current_Listview_Num)
@@ -1956,11 +1959,11 @@ class DxManager(QMainWindow):
             remainder = days_difference % 2
 
             if remainder == 1:
-                self.changeListViewUI_(days_difference+4)
+                self.temp_listview_manager.changeListViewUI_(days_difference+4)
                 schedule_EndDate = start + timedelta(days=days_difference+2)
 
             else:                
-                self.changeListViewUI_(days_difference+2)
+                self.temp_listview_manager.changeListViewUI_(days_difference+2)
                 schedule_EndDate = start + timedelta(days=days_difference+1)
 
             # 리스트뷰의 엔드날짜 
@@ -1989,7 +1992,7 @@ class DxManager(QMainWindow):
                     frameLayout = frame.layout()
                     listview = frameLayout.itemAt(0).widget()
                     
-                    tasks = self.getListViewItem(listview) # 현재 ui상에 디스플레이되어있는 아이템들 가져오기
+                    tasks = self.temp_listview_manager.getListViewItem(listview) # 현재 ui상에 디스플레이되어있는 아이템들 가져오기
 
                     # 현재 찾으려는 태스크와 동일한 태스크가 리스트뷰에 존재하면 하이라이트 시킴
                     if item in tasks:
@@ -2019,7 +2022,7 @@ class DxManager(QMainWindow):
                 frameLayout = frame.layout()
                 listview = frameLayout.itemAt(0).widget()
                 
-                tasks = self.getListViewItem(listview) # 현재 ui상에 디스플레이되어있는 아이템들 가져오기
+                tasks = self.temp_listview_manager.getListViewItem(listview) # 현재 ui상에 디스플레이되어있는 아이템들 가져오기
 
                 # 현재 찾으려는 태스크와 동일한 태스크가 리스트뷰에 존재하면 하이라이트 시킴
 
@@ -2145,17 +2148,17 @@ class DxManager(QMainWindow):
 
             if remainder == 1:
                 total_addDays = days_difference
-                #self.changeListViewUI_(days_difference+4)
+                #self.temp_listview_manager.changeListViewUI_(days_difference+4)
                 schedule_EndDate = minDate + timedelta(days=days_difference-1)
 
 
             else:      
                 total_addDays = days_difference+1
-                #self.changeListViewUI_(days_difference+2)
+                #self.temp_listview_manager.changeListViewUI_(days_difference+2)
                 schedule_EndDate = minDate + timedelta(days=days_difference)
 
             # 스케쥴만큼 리스트뷰 갯수 추가 혹은 삭제
-            self.changeListViewUI_(total_addDays)
+            self.temp_listview_manager.changeListViewUI_(total_addDays)
 
             self.comboYear.setCurrentText(str(schedule_EndDate.year))
             self.comboMonth.setCurrentText(str(schedule_EndDate.month))            
@@ -3405,26 +3408,14 @@ class DxManager(QMainWindow):
 
 
 
-    @Slot(int)
-    def setListviewLineEdit(self, value): # 슬라이더의 value가 홀수만 출력되도록하며, lineEdit의 텍스트가 그값을 받아 표시되도록 함
-        """TempListViewManager로 위임"""
-        self.temp_listview_manager.setListviewLineEdit(value)
 
 
 
 
-    @Slot()
-    def changeListViewUI_notTracking(self):
-        """슬라이더 릴리즈 시 ListView UI 변경 - 임시 클래스로 위임"""
-        return self.temp_listview_manager.changeListViewUI_notTracking()
 
 
 
 
-    @Slot()
-    def changeListViewUI_(self, text):
-        """LineEdit 텍스트 변경 시 ListView UI 변경 - 임시 클래스로 위임"""
-        return self.temp_listview_manager.changeListViewUI_(text)
 
           
 
@@ -3433,14 +3424,14 @@ class DxManager(QMainWindow):
 
 
 
-    def addListView(self, num, currentNum, scaleUI):
-        """ListView 추가 - 임시 클래스로 위임"""
 
+
+
+
+    def addListView(self, num, currentNum, scaleUI):
+        """ListView 추가 - activeJsonData 로직 유지 필요"""
         activeJsonData = jsonData
         return self.temp_listview_manager.addListView(num, currentNum, scaleUI, activeJsonData)
-
-
-
 
     def _remove_layout(self, remItem):
 
@@ -3474,9 +3465,6 @@ class DxManager(QMainWindow):
 
 
 
-    def removeListView(self, removeNum, currentNum):
-        """ListView 제거 - 임시 클래스로 위임"""
-        return self.temp_listview_manager.removeListView(removeNum, currentNum)
 
 
 
@@ -3979,9 +3967,6 @@ class DxManager(QMainWindow):
 
 
     # 초기 스케쥴 리스트뷰 UI생성
-    def setUp_listViewUI(self):
-        """초기 ListView UI 설정 - 임시 클래스로 위임"""
-        return self.temp_listview_manager.setUp_listViewUI(jsonData)
 
 
 
@@ -4010,33 +3995,21 @@ class DxManager(QMainWindow):
 
 
 
-    def makeListView(self, label, listView, parentLayout, childLayout, scaleUI):
-        """TempListViewManager로 위임"""
-        return self.temp_listview_manager.makeListView(label, listView, parentLayout, childLayout, scaleUI)
 
 
 
 
     # 리스트뷰 내 아이템의 리스트 가져오기 / jsonData내에 있지만 리스트뷰에 보여지지 않는 아이템들도 가져오기
-    def getListViewItem_inJson(self, listView, members):
-        """TempListViewManager로 위임"""
-        return self.temp_listview_manager.getListViewItem_inJson(listView, members)
 
 
 
 
 
-    def getListViewItem(self, listView):
-        """TempListViewManager로 위임"""
-        return self.temp_listview_manager.getListViewItem(listView)
 
 
 
 
     # 리스트뷰내 선택되어진 아이템들의 리스트 가져오기
-    def getListView_selectedItem(self, listView):
-        """TempListViewManager로 위임"""
-        return self.temp_listview_manager.getListView_selectedItem(listView)
 
 
 
@@ -4213,7 +4186,7 @@ class DxManager(QMainWindow):
                     frameLayout = frame.layout()
                     listview = frameLayout.itemAt(0).widget()
 
-                    tasks = self.getListViewItem(listview) # 현재 ui상에 디스플레이되어있는 아이템들 가져오기
+                    tasks = self.temp_listview_manager.getListViewItem(listview) # 현재 ui상에 디스플레이되어있는 아이템들 가져오기
 
                     model_ = listview.model()
                     if item in tasks:
@@ -4363,8 +4336,8 @@ class DxManager(QMainWindow):
                 frameLayout = frame.layout()
                 listview = frameLayout.itemAt(0).widget()
 
-                tasks = self.getListViewItem(listview) # 현재 ui상에 디스플레이되어있는 아이템들 가져오기
-                tasks_inJson = self.getListViewItem_inJson(listview, checkedMembers)
+                tasks = self.temp_listview_manager.getListViewItem(listview) # 현재 ui상에 디스플레이되어있는 아이템들 가져오기
+                tasks_inJson = self.temp_listview_manager.getListViewItem_inJson(listview, checkedMembers)
 
                 if tasks_inJson:
                     for task_ in tasks_inJson:
@@ -4374,7 +4347,7 @@ class DxManager(QMainWindow):
                 listView_task.append(tasks)
 
         # 현재 스케쥴 리스트뷰의 날짜정보 가져오기
-        listView_date = self.getCurrentListViewDate(0)
+        listView_date = self.temp_listview_manager.getCurrentListViewDate(0)
 
         # 현재 샷 리스트상에 로드된 샷들의 태스크정보 읽어오기
         taskInfoJson = self.file_manager.import_Json(currentPath+"/.task_info", userID+"_task_info.json")
@@ -4573,7 +4546,7 @@ class DxManager(QMainWindow):
     # 한칸 앞, 또는 한칸 뒤로 이동을 위한 ui 의 요청에 따라 스케쥴 리스트뷰의 내용을 갱신
     def move_sideways(self, direction, scheduleData):
 
-        old_listViewDate = self.getCurrentListViewDate(0)
+        old_listViewDate = self.temp_listview_manager.getCurrentListViewDate(0)
         listViewDate = self.temp_listview_manager.getCurrentListViewDate(direction)
         listViewNum = self.dayUi.splitter.count()
 
@@ -5230,9 +5203,6 @@ class DxManager(QMainWindow):
 
 
     # refereshListView 메서드내에서 실행되어 스케쥴데이터가 업데이트될때마다 뷰필터 체크박스를 확인하여 내용을 갱신시킴
-    def set_listView_view(self, listView, model):
-        """TempListViewManager로 위임"""
-        self.temp_listview_manager.set_listView_view(listView, model)
 
 
 
@@ -5511,9 +5481,6 @@ class DxManager(QMainWindow):
 
 
 
-    def getCurrentListViewDate(self, shiftDays):
-        """TempListViewManager로 위임"""
-        return self.temp_listview_manager.getCurrentListViewDate(shiftDays)
 
 
     # 한번도 스케쥴 데이터가 생성된적이 없는경우 초기 제이슨파일 생성
